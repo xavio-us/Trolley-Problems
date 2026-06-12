@@ -4,6 +4,8 @@ spawnTimer = 0
 spawnDelay = 0
 numRails = 6
 death = {}
+gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4}
+gamestate = gamestates.menu -- you should start on the menu
 enemyTypes = {}
 rails = {}
 bullets = {}
@@ -22,7 +24,7 @@ function love.load()
 	player.fireCooldown = 0
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
-	gamestate = true
+	gamestate = gamestates.alive -- change later when main menu added
 	death.img = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
 	enemyTypes = {
     	basic = {
@@ -56,11 +58,13 @@ function getRailHeight()
     return (love.graphics.getHeight() - padding * 2) / numRails
 end
 function love.keypressed(keyid, key, isrepeat)
-	if gamestate == true then -- could be changed to represent more than 2 gamestates
+	if gamestate == gamestates.alive then
 		if key == 'w' then
 			player.rail = ((player.rail + numRails - 2) % numRails) + 1 -- sub 1 and mod rails (offset due to 1 indexing)
 		elseif key == 's' then
 			player.rail = (player.rail % numRails) + 1 -- add 1 mod rails
+		elseif key == 'escape' then
+			gamestate = gamestates.paused
 		end
 		if key == ('space') and player.fireCooldown <= 0 then
     		-- Assuming player.x, player.y, and player.facing (1 for right, -1 for left) exist...
@@ -75,15 +79,19 @@ function love.keypressed(keyid, key, isrepeat)
     		table.insert(bullets, bullet)
     		player.fireCooldown = player.fireRate
   		end
+	elseif gamestate == gamestates.paused then
+		if key == 'escape' then
+			gamestate = gamestates.alive
+		end
 	end
 end
 function love.update(dt)
+	if gamestate == gamestates.alive then
 	--checks if the game is over every tick based on whether you died or not
-	player.fireCooldown = player.fireCooldown - dt
-	if player.fireCooldown < 0 then
-    	player.fireCooldown = 0
-	end
-	if gamestate == true then		
+		player.fireCooldown = player.fireCooldown - dt
+		if player.fireCooldown < 0 then
+			player.fireCooldown = 0
+		end		
 		local railHeight = getRailHeight()
 		player.y = padding + (player.rail - 0.5) * railHeight - player.img:getHeight() -- move player to rail's location
 		for i = #bullets, 1, - 1 do
@@ -158,9 +166,12 @@ function love.update(dt)
 		--collision check
 		for i, enemy in ipairs(enemies) do
         	if checkCollision(player, enemy) then
-            	gamestate = false
+            	gamestate = gamestates.dead
         	end
     	end
+	end
+	if gamestate == gamestates.paused then
+		-- pause stuff here
 	end
 end
 
@@ -202,43 +213,48 @@ function checkCollision(a, b)
            a.y + a.img:getHeight() > b.y
 end
 function love.draw()
-	love.graphics.setColor(1, 1, 1)        -- set rail color to white
-	for i = 1, #rails do
-    	local rail = rails[i]
-
-    	local scaleX =
-        	love.graphics.getWidth() / rail.img:getWidth()
-
-    	love.graphics.draw(
-        	rail.img,
-        	0,
-        	rail.y,
-        	0,
-        	scaleX,
-        	1,
-        	0,
-        	rail.img:getHeight()
-    	)
-	end
-        -- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
-	love.graphics.draw(player.img, player.x, player.y)
-	for i, enemy in ipairs(enemies) do
-        love.graphics.draw(enemy.img, enemy.x, enemy.y)
-    end
-	-- Draw bullets
-  	for i, bullet in ipairs(bullets) do
-    	love.graphics.circle(
-      	"fill",
-      	bullet.x,
-      	bullet.y,
-      	bullet.width,
-      	bullet.height
-    )
-  end
-	if gamestate == false then
+	love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
+	if gamestate == gamestates.dead then
 		love.graphics.print("Death", love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
 		love.graphics.draw(death.img,0, 0, 0,love.graphics.getWidth() / death.img:getWidth(), love.graphics.getHeight() / death.img:getHeight())
+	end
+	if gamestate == gamestates.alive or gamestate == gamestates.paused then
+		love.graphics.setColor(1, 1, 1)        -- set rail color to white
+		for i = 1, #rails do
+			local rail = rails[i]
 
+			local scaleX =
+				love.graphics.getWidth() / rail.img:getWidth()
+
+			love.graphics.draw(
+				rail.img,
+				0,
+				rail.y,
+				0,
+				scaleX,
+				1,
+				0,
+				rail.img:getHeight()
+			)
+		end
+			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
+		love.graphics.draw(player.img, player.x, player.y)
+		for i, enemy in ipairs(enemies) do
+			love.graphics.draw(enemy.img, enemy.x, enemy.y)
+		end
+		-- Draw bullets
+		for i, bullet in ipairs(bullets) do
+			love.graphics.circle(
+			"fill",
+			bullet.x,
+			bullet.y,
+			bullet.width,
+			bullet.height
+			)
+		end
+	end
+	if gamestate == gamestates.paused then
+		-- draw pause menu
 	end
 end
 
