@@ -3,10 +3,12 @@ enemies = {}
 spawnTimer = 0
 spawnDelay = 0
 numRails = 6
-death = {}
+sprites = {}
 gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4}
 gamestate = gamestates.menu -- you should start on the menu
 enemyTypes = {}
+width = love.graphics.getWidth()
+height = love.graphics.getHeight()
 rails = {}
 bullets = {}
 bulletSpeed = 500
@@ -24,8 +26,9 @@ function love.load()
 	player.fireCooldown = 0
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
-	gamestate = gamestates.alive -- change later when main menu added
-	death.img = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
+	gamestate = gamestates.menu -- change later when main menu added
+	sprites.death = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
+	sprites.start = love.graphics.newImage('assets/sprites/start.png')
 	enemyTypes = {
     	basic = {
         	image = love.graphics.newImage("assets/sprites/placeholder/red.png"),
@@ -86,6 +89,16 @@ function love.keypressed(keyid, key, isrepeat)
 	end
 end
 function love.update(dt)
+	if gamestate == gamestates.menu then
+		if love.mouse.isDown(1) then
+			x, y = love.mouse.getPosition()
+			if (x > width/2 - sprites.start:getWidth()/2 and x < width/2 + sprites.start:getWidth()/2) and (y > height/2 - sprites.start:getHeight()/2 and y < height/2 + sprites.start:getHeight()/2) then
+				gamestate = gamestates.alive
+				love.graphics.setBackgroundColor(0,0,0)
+			end
+		end
+	end
+
 	if gamestate == gamestates.alive then
 	--checks if the game is over every tick based on whether you died or not
 		player.fireCooldown = player.fireCooldown - dt
@@ -213,10 +226,16 @@ function checkCollision(a, b)
            a.y + a.img:getHeight() > b.y
 end
 function love.draw()
-	love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
+
+	if gamestate == gamestates.menu then
+		love.graphics.setBackgroundColor(150/255, 200/255, 1)
+		love.graphics.draw(sprites.start, width/2 - sprites.start:getWidth()/2, height/2 - sprites.start:getHeight()/2)
+	end
+
+	-- love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
 	if gamestate == gamestates.dead then
 		love.graphics.print("Death", love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
-		love.graphics.draw(death.img,0, 0, 0,love.graphics.getWidth() / death.img:getWidth(), love.graphics.getHeight() / death.img:getHeight())
+		love.graphics.draw(sprites.death,0, 0, 0,love.graphics.getWidth() / sprites.death:getWidth(), love.graphics.getHeight() / sprites.death:getHeight())
 	end
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
 		love.graphics.setColor(1, 1, 1)        -- set rail color to white
