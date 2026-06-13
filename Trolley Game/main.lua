@@ -22,6 +22,14 @@ function Height()
 	return love.graphics.getHeight()
 end
 
+function generateRail(i,j)
+	return {
+		img = railImg,
+		x = (j-1)*railImg:getWidth(),
+		y = padding + (i - 0.5) * getRailHeight() + math.random(-2,2) -- variations to show which rail is which
+	}
+end
+
 function love.load()
 
 	-- reset everything
@@ -64,23 +72,19 @@ function love.load()
         	speed = 25
     	}
 	}
-	railImg = love.graphics.newImage("assets/sprites/placeholder/Placeholder Tracks.png")
-	local railHeight = getRailHeight()
-	for i = 1, numRails do
-		local rail = {
-			y = padding + (i - 0.5) * railHeight,
-			img = railImg
-		}
-		table.insert(rails, rail)
+	railImg = love.graphics.newImage("assets/sprites/rail_tile.png")
+	for i=1, numRails do
+		rails[i] = {}
+		for j=1, math.ceil(Width()/railImg:getWidth()) + 1 do
+			rails[i][j] = generateRail(i,j)
+		end
 	end
-	
-	
 end
 function indexMod(a, b, c) -- value, increment, mod
 	return ((a + b + c - 1) % c) + 1
 end
 function getRailHeight()
-    return (love.graphics.getHeight() - padding * 2) / numRails
+    return (Height() - padding * 2) / numRails
 end
 function love.keypressed(keyid, key, isrepeat)
 	if gamestate == gamestates.alive then
@@ -236,6 +240,18 @@ function love.update(dt)
             	gamestate = gamestates.dead
         	end
     	end
+
+		-- rail tile movement
+		for i = 1, #rails do
+			for j = 1, #rails[i] do
+				local rail = rails[i][j]
+				rail.x = rail.x - 2
+			end
+			if -rails[i][1].x > rails[i][1].img:getWidth() then
+				table.remove(rails[i], 1)
+				rails[i][#rails[i]+1] = generateRail(i,#rails[i])
+			end
+		end
 	end
 end
 
@@ -291,21 +307,20 @@ function love.draw()
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
 		love.graphics.setColor(1, 1, 1)        -- set rail color to white
 		for i = 1, #rails do
-			local rail = rails[i]
+			for j = 1, #rails[i] do
+				local rail = rails[i][j]
 
-			local scaleX =
-				Width() / rail.img:getWidth()
-
-			love.graphics.draw(
-				rail.img,
-				0,
-				rail.y,
-				0,
-				scaleX,
-				1,
-				0,
-				rail.img:getHeight()
-			)
+				love.graphics.draw(
+					rail.img,
+					rail.x,
+					rail.y,
+					0,
+					1,
+					1,
+					0,
+					rail.img:getHeight()
+				)
+			end
 		end
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
