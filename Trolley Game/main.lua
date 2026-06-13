@@ -7,12 +7,19 @@ sprites = {}
 gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4}
 gamestate = gamestates.menu -- you should start on the menu
 enemyTypes = {}
-width = love.graphics.getWidth()
-height = love.graphics.getHeight()
 rails = {}
 bullets = {}
 bulletSpeed = 500
 padding = 40
+
+function Width()
+	return love.graphics.getWidth()
+end
+
+function Height()
+	return love.graphics.getHeight()
+end
+
 function love.load()
 	    -- This is the coordinates where the player character will be rendered.
 	player.x = 100   -- This sets the player at the middle of the screen based on the width of the game window. 
@@ -29,6 +36,8 @@ function love.load()
 	gamestate = gamestates.menu -- change later when main menu added
 	sprites.death = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
 	sprites.start = love.graphics.newImage('assets/sprites/start.png')
+	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
+
 	enemyTypes = {
     	basic = {
         	image = love.graphics.newImage("assets/sprites/placeholder/red.png"),
@@ -92,7 +101,7 @@ function love.update(dt)
 	if gamestate == gamestates.menu then
 		if love.mouse.isDown(1) then
 			x, y = love.mouse.getPosition()
-			if (x > width/2 - sprites.start:getWidth()/2 and x < width/2 + sprites.start:getWidth()/2) and (y > height/2 - sprites.start:getHeight()/2 and y < height/2 + sprites.start:getHeight()/2) then
+			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
 				gamestate = gamestates.alive
 				love.graphics.setBackgroundColor(0,0,0)
 			end
@@ -133,7 +142,7 @@ function love.update(dt)
     		bullet.x = bullet.x + bullet.speed * bullet.facing * dt
 
     		-- Remove off-screen bullets
-    		if bullet.x < 0 or bullet.x > love.graphics.getWidth() then
+    		if bullet.x < 0 or bullet.x > Width() then
       			table.remove(bullets, i)
     		end
   		end
@@ -199,7 +208,7 @@ function spawnEnemy()
 	local railHeight = getRailHeight()
     local enemy = {
         type = enemyType,
-        x = love.graphics.getWidth(),
+        x = Width(),
         speed = data.speed,
 		y = padding + (rail - 0.5) * railHeight - data.image:getHeight(),
         img = data.image,
@@ -229,13 +238,13 @@ function love.draw()
 
 	if gamestate == gamestates.menu then
 		love.graphics.setBackgroundColor(150/255, 200/255, 1)
-		love.graphics.draw(sprites.start, width/2 - sprites.start:getWidth()/2, height/2 - sprites.start:getHeight()/2)
+		love.graphics.draw(sprites.start, Width()/2 - sprites.start:getWidth()/2, Height()/2 - sprites.start:getHeight()/2)
 	end
 
 	-- love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
 	if gamestate == gamestates.dead then
-		love.graphics.print("Death", love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
-		love.graphics.draw(sprites.death,0, 0, 0,love.graphics.getWidth() / sprites.death:getWidth(), love.graphics.getHeight() / sprites.death:getHeight())
+		love.graphics.print("Death", Width() / 2, Height()/2)
+		love.graphics.draw(sprites.death,0, 0, 0,Width() / sprites.death:getWidth(), Height() / sprites.death:getHeight())
 	end
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
 		love.graphics.setColor(1, 1, 1)        -- set rail color to white
@@ -243,7 +252,7 @@ function love.draw()
 			local rail = rails[i]
 
 			local scaleX =
-				love.graphics.getWidth() / rail.img:getWidth()
+				Width() / rail.img:getWidth()
 
 			love.graphics.draw(
 				rail.img,
@@ -273,7 +282,11 @@ function love.draw()
 		end
 	end
 	if gamestate == gamestates.paused then
-		-- draw pause menu
+		love.graphics.setColor(0,0,0,0.85) -- high alpha black rectangle over the whole screen
+		love.graphics.rectangle("fill",0,0,Width(),Height())
+		love.graphics.setColor(1,1,1,1) -- regular white (for now)
+
+		love.graphics.draw(sprites.paused, Width()/2 - sprites.paused:getWidth()/2, .30*Height() - sprites.paused:getHeight()/2)
 	end
 end
 
