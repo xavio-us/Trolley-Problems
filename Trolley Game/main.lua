@@ -11,6 +11,8 @@ rails = {}
 bullets = {}
 bulletSpeed = 500
 padding = 40
+pauseFont = love.graphics.newFont(32) -- size 32 default font
+highlighted = 0 -- which option in a menu is highlighted, 0 means none, 1 is first
 
 function Width()
 	return love.graphics.getWidth()
@@ -21,6 +23,14 @@ function Height()
 end
 
 function love.load()
+
+	-- reset everything
+	enemies = {}
+	spawnTimer = 0
+	spawnDelay = 0
+	rails = {}
+	bullets = {}
+
 	    -- This is the coordinates where the player character will be rendered.
 	player.x = 100   -- This sets the player at the middle of the screen based on the width of the game window. 
 	player.y = love.graphics.getHeight()/numRails  -- This sets the player at the middle of the screen based on the height of the game window and number of rails. 
@@ -66,17 +76,21 @@ function love.load()
 	
 	
 end
+function indexMod(a, b, c) -- value, increment, mod
+	return ((a + b + c - 1) % c) + 1
+end
 function getRailHeight()
     return (love.graphics.getHeight() - padding * 2) / numRails
 end
 function love.keypressed(keyid, key, isrepeat)
 	if gamestate == gamestates.alive then
 		if key == 'w' then
-			player.rail = ((player.rail + numRails - 2) % numRails) + 1 -- sub 1 and mod rails (offset due to 1 indexing)
+			player.rail = indexMod(player.rail, -1, numRails) -- sub 1 and mod rails (function to do 1 indexing)
 		elseif key == 's' then
-			player.rail = (player.rail % numRails) + 1 -- add 1 mod rails
+			player.rail = indexMod(player.rail, 1, numRails) -- add 1 mod rails
 		elseif key == 'escape' then
 			gamestate = gamestates.paused
+			highlighted = 1
 		end
 		if key == ('space') and player.fireCooldown <= 0 then
     		-- Assuming player.x, player.y, and player.facing (1 for right, -1 for left) exist...
@@ -94,6 +108,21 @@ function love.keypressed(keyid, key, isrepeat)
 	elseif gamestate == gamestates.paused then
 		if key == 'escape' then
 			gamestate = gamestates.alive
+		elseif key == 'w' then
+			highlighted = indexMod(highlighted, -1, 3) -- num options is 3 right now, change if diff.
+		elseif key == 's' then
+			highlighted = indexMod(highlighted, 1, 3)
+		elseif key == 'space' then
+			if highlighted == 1 then
+				gamestate = gamestates.alive
+			elseif highlighted == 2 then
+				gamestate = gamestates.menu
+				love.load()
+				-- maybe reset game here? i dont know
+			elseif highlighted == 3 then
+				-- save data?
+				love.event.quit(0) -- quit gracefully
+			end
 		end
 	end
 end
@@ -106,9 +135,25 @@ function love.update(dt)
 				love.graphics.setBackgroundColor(0,0,0)
 			end
 		end
-	end
-
-	if gamestate == gamestates.alive then
+	elseif gamestate == gamestates.paused then
+		x, y = love.mouse.getPosition()
+		for i=1,3 do
+			if (x > .40*Width() and x < .60*Width() and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+pauseFont:getHeight()) then
+				highlighted = i
+				if love.mouse.isDown(1) then
+					if highlighted == 1 then
+						gamestate = gamestates.alive
+					elseif highlighted == 2 then
+						gamestate = gamestates.Menu
+						love.load()
+					elseif highlighted == 3 then
+						love.event.quit(0)
+					end
+				end
+				break
+			end
+		end
+	elseif gamestate == gamestates.alive then
 	--checks if the game is over every tick based on whether you died or not
 		player.fireCooldown = player.fireCooldown - dt
 		if player.fireCooldown < 0 then
@@ -191,9 +236,6 @@ function love.update(dt)
             	gamestate = gamestates.dead
         	end
     	end
-	end
-	if gamestate == gamestates.paused then
-		-- pause stuff here
 	end
 end
 
@@ -284,9 +326,21 @@ function love.draw()
 	if gamestate == gamestates.paused then
 		love.graphics.setColor(0,0,0,0.85) -- high alpha black rectangle over the whole screen
 		love.graphics.rectangle("fill",0,0,Width(),Height())
-		love.graphics.setColor(1,1,1,1) -- regular white (for now)
 
-		love.graphics.draw(sprites.paused, Width()/2 - sprites.paused:getWidth()/2, .30*Height() - sprites.paused:getHeight()/2)
+		love.graphics.setColor(1,1,1) -- regular white (for now)
+
+		love.graphics.draw(sprites.paused, Width()/2 - sprites.paused:getWidth()/2, .25*Height() - sprites.paused:getHeight()/2)
+		love.graphics.printf("Continue" ,pauseFont,.25*Width(),.50*Height(),.50*Width(),"center")
+		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
+		love.graphics.printf("Quit"     ,pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+
+		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		if highlighted > 0 then
+			love.graphics.rectangle("fill", .40*Width(), .40*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+		end
+
+		love.graphics.setColor(1,1,1) -- back to default
+
 	end
 end
 
