@@ -247,9 +247,9 @@ function love.update(dt)
 				local rail = rails[i][j]
 				rail.x = rail.x - 2
 			end
-			if -rails[i][1].x > rails[i][1].img:getWidth() then
+			if -rails[i][1].x >= rails[i][1].img:getWidth() then
 				table.remove(rails[i], 1)
-				rails[i][#rails[i]+1] = generateRail(i,#rails[i])
+				rails[i][#rails[i]+1] = generateRail(i,#rails[i]+1)
 			end
 		end
 	end
