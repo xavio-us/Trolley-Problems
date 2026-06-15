@@ -3,13 +3,42 @@ enemies = {}
 spawnTimer = 0
 spawnDelay = 0
 numRails = 6
-death = {}
+sprites = {}
+gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4}
+gamestate = gamestates.menu -- you should start on the menu
 enemyTypes = {}
 rails = {}
 bullets = {}
 bulletSpeed = 500
 padding = 40
+pauseFont = love.graphics.newFont(32) -- size 32 default font
+highlighted = 0 -- which option in a menu is highlighted, 0 means none, 1 is first
+
+function Width()
+	return love.graphics.getWidth()
+end
+
+function Height()
+	return love.graphics.getHeight()
+end
+
+function generateRail(i,j)
+	return {
+		img = railImg,
+		x = (j-1)*railImg:getWidth(),
+		y = padding + (i - 0.5) * getRailHeight() + math.random(-2,2) -- variations to show which rail is which
+	}
+end
+
 function love.load()
+
+	-- reset everything
+	enemies = {}
+	spawnTimer = 0
+	spawnDelay = 0
+	rails = {}
+	bullets = {}
+
 	    -- This is the coordinates where the player character will be rendered.
 	player.x = 100   -- This sets the player at the middle of the screen based on the width of the game window. 
 	player.y = love.graphics.getHeight()/numRails  -- This sets the player at the middle of the screen based on the height of the game window and number of rails. 
@@ -22,8 +51,11 @@ function love.load()
 	player.fireCooldown = 0
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
-	gamestate = true
-	death.img = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
+	gamestate = gamestates.menu -- change later when main menu added
+	sprites.death = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
+	sprites.start = love.graphics.newImage('assets/sprites/start.png')
+	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
+
 	enemyTypes = {
     	basic = {
         	image = love.graphics.newImage("assets/sprites/placeholder/red.png"),
@@ -40,27 +72,33 @@ function love.load()
         	speed = 25
     	}
 	}
-	railImg = love.graphics.newImage("assets/sprites/placeholder/Placeholder Tracks.png")
-	local railHeight = getRailHeight()
-	for i = 1, numRails do
-		local rail = {
-			y = padding + (i - 0.5) * railHeight,
-			img = railImg
-		}
-		table.insert(rails, rail)
+	railImg = love.graphics.newImage("assets/sprites/rail_tile.png")
+	for i=1, numRails do
+		rails[i] = {}
+		for j=1, math.ceil(Width()/railImg:getWidth()) + 1 do
+			rails[i][j] = generateRail(i,j)
+		end
 	end
-	
-	
+end
+function indexMod(a, b, c) -- value, increment, mod
+	return ((a + b + c - 1) % c) + 1
 end
 function getRailHeight()
-    return (love.graphics.getHeight() - padding * 2) / numRails
+    return (Height() - padding * 2) / numRails
 end
 function love.keypressed(keyid, key, isrepeat)
-	if gamestate == true then -- could be changed to represent more than 2 gamestates
+	if gamestate == gamestates.alive then
 		if key == 'w' then
-			player.rail = ((player.rail + numRails - 2) % numRails) + 1 -- sub 1 and mod rails (offset due to 1 indexing)
+			if player.rail > 1 then
+				player.rail = player.rail - 1
+			end
 		elseif key == 's' then
-			player.rail = (player.rail % numRails) + 1 -- add 1 mod rails
+			if player.rail < numRails then
+				player.rail = player.rail + 1
+			end
+		elseif key == 'escape' then
+			gamestate = gamestates.paused
+			highlighted = 1
 		end
 		if key == ('space') and player.fireCooldown <= 0 then
     		-- Assuming player.x, player.y, and player.facing (1 for right, -1 for left) exist...
@@ -75,15 +113,60 @@ function love.keypressed(keyid, key, isrepeat)
     		table.insert(bullets, bullet)
     		player.fireCooldown = player.fireRate
   		end
+	elseif gamestate == gamestates.paused then
+		if key == 'escape' then
+			gamestate = gamestates.alive
+		elseif key == 'w' then
+			highlighted = indexMod(highlighted, -1, 3) -- num options is 3 right now, change if diff.
+		elseif key == 's' then
+			highlighted = indexMod(highlighted, 1, 3)
+		elseif key == 'space' then
+			if highlighted == 1 then
+				gamestate = gamestates.alive
+			elseif highlighted == 2 then
+				gamestate = gamestates.menu
+				love.load()
+				-- maybe reset game here? i dont know
+			elseif highlighted == 3 then
+				-- save data?
+				love.event.quit(0) -- quit gracefully
+			end
+		end
 	end
 end
 function love.update(dt)
+	if gamestate == gamestates.menu then
+		if love.mouse.isDown(1) then
+			x, y = love.mouse.getPosition()
+			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
+				gamestate = gamestates.alive
+				love.graphics.setBackgroundColor(0,0,0)
+			end
+		end
+	elseif gamestate == gamestates.paused then
+		x, y = love.mouse.getPosition()
+		for i=1,3 do
+			if (x > .40*Width() and x < .60*Width() and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+pauseFont:getHeight()) then
+				highlighted = i
+				if love.mouse.isDown(1) then
+					if highlighted == 1 then
+						gamestate = gamestates.alive
+					elseif highlighted == 2 then
+						gamestate = gamestates.Menu
+						love.load()
+					elseif highlighted == 3 then
+						love.event.quit(0)
+					end
+				end
+				break
+			end
+		end
+	elseif gamestate == gamestates.alive then
 	--checks if the game is over every tick based on whether you died or not
-	player.fireCooldown = player.fireCooldown - dt
-	if player.fireCooldown < 0 then
-    	player.fireCooldown = 0
-	end
-	if gamestate == true then		
+		player.fireCooldown = player.fireCooldown - dt
+		if player.fireCooldown < 0 then
+			player.fireCooldown = 0
+		end		
 		local railHeight = getRailHeight()
 		player.y = padding + (player.rail - 0.5) * railHeight - player.img:getHeight() -- move player to rail's location
 		for i = #bullets, 1, - 1 do
@@ -112,7 +195,7 @@ function love.update(dt)
     		bullet.x = bullet.x + bullet.speed * bullet.facing * dt
 
     		-- Remove off-screen bullets
-    		if bullet.x < 0 or bullet.x > love.graphics.getWidth() then
+    		if bullet.x < 0 or bullet.x > Width() then
       			table.remove(bullets, i)
     		end
   		end
@@ -158,9 +241,21 @@ function love.update(dt)
 		--collision check
 		for i, enemy in ipairs(enemies) do
         	if checkCollision(player, enemy) then
-            	gamestate = false
+            	gamestate = gamestates.dead
         	end
     	end
+
+		-- rail tile movement
+		for i = 1, #rails do
+			for j = 1, #rails[i] do
+				local rail = rails[i][j]
+				rail.x = rail.x - 2
+			end
+			if -rails[i][1].x >= rails[i][1].img:getWidth() then
+				table.remove(rails[i], 1)
+				rails[i][#rails[i]+1] = generateRail(i,#rails[i]+1)
+			end
+		end
 	end
 end
 
@@ -175,7 +270,7 @@ function spawnEnemy()
 	local railHeight = getRailHeight()
     local enemy = {
         type = enemyType,
-        x = love.graphics.getWidth(),
+        x = Width(),
         speed = data.speed,
 		y = padding + (rail - 0.5) * railHeight - data.image:getHeight(),
         img = data.image,
@@ -202,42 +297,68 @@ function checkCollision(a, b)
            a.y + a.img:getHeight() > b.y
 end
 function love.draw()
-	love.graphics.setColor(1, 1, 1)        -- set rail color to white
-	for i = 1, #rails do
-    	local rail = rails[i]
 
-    	local scaleX =
-        	love.graphics.getWidth() / rail.img:getWidth()
-
-    	love.graphics.draw(
-        	rail.img,
-        	0,
-        	rail.y,
-        	0,
-        	scaleX,
-        	1,
-        	0,
-        	rail.img:getHeight()
-    	)
+	if gamestate == gamestates.menu then
+		love.graphics.setBackgroundColor(150/255, 200/255, 1)
+		love.graphics.draw(sprites.start, Width()/2 - sprites.start:getWidth()/2, Height()/2 - sprites.start:getHeight()/2)
 	end
-        -- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
-	love.graphics.draw(player.img, player.x, player.y)
-	for i, enemy in ipairs(enemies) do
-        love.graphics.draw(enemy.img, enemy.x, enemy.y)
-    end
-	-- Draw bullets
-  	for i, bullet in ipairs(bullets) do
-    	love.graphics.circle(
-      	"fill",
-      	bullet.x,
-      	bullet.y,
-      	bullet.width,
-      	bullet.height
-    )
-  end
-	if gamestate == false then
-		love.graphics.print("Death", love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
-		love.graphics.draw(death.img,0, 0, 0,love.graphics.getWidth() / death.img:getWidth(), love.graphics.getHeight() / death.img:getHeight())
+
+	-- love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
+	if gamestate == gamestates.dead then
+		love.graphics.print("Death", Width() / 2, Height()/2)
+		love.graphics.draw(sprites.death,0, 0, 0,Width() / sprites.death:getWidth(), Height() / sprites.death:getHeight())
+	end
+	if gamestate == gamestates.alive or gamestate == gamestates.paused then
+		love.graphics.setColor(1, 1, 1)        -- set rail color to white
+		for i = 1, #rails do
+			for j = 1, #rails[i] do
+				local rail = rails[i][j]
+
+				love.graphics.draw(
+					rail.img,
+					rail.x,
+					rail.y,
+					0,
+					1,
+					1,
+					0,
+					rail.img:getHeight()
+				)
+			end
+		end
+			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
+		love.graphics.draw(player.img, player.x, player.y)
+		for i, enemy in ipairs(enemies) do
+			love.graphics.draw(enemy.img, enemy.x, enemy.y)
+		end
+		-- Draw bullets
+		for i, bullet in ipairs(bullets) do
+			love.graphics.circle(
+			"fill",
+			bullet.x,
+			bullet.y,
+			bullet.width,
+			bullet.height
+			)
+		end
+	end
+	if gamestate == gamestates.paused then
+		love.graphics.setColor(0,0,0,0.85) -- high alpha black rectangle over the whole screen
+		love.graphics.rectangle("fill",0,0,Width(),Height())
+
+		love.graphics.setColor(1,1,1) -- regular white (for now)
+
+		love.graphics.draw(sprites.paused, Width()/2 - sprites.paused:getWidth()/2, .25*Height() - sprites.paused:getHeight()/2)
+		love.graphics.printf("Continue" ,pauseFont,.25*Width(),.50*Height(),.50*Width(),"center")
+		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
+		love.graphics.printf("Quit"     ,pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+
+		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		if highlighted > 0 then
+			love.graphics.rectangle("fill", .40*Width(), .40*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+		end
+
+		love.graphics.setColor(1,1,1) -- back to default
 
 	end
 end
