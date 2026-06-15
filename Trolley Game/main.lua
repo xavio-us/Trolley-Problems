@@ -30,6 +30,16 @@ function generateRail(i,j)
 	}
 end
 
+function resetBgTiles()
+	backgroundTiles = {}
+	backgroundTiles.a = {
+		x = -Width()/2, y = 0
+	}
+	backgroundTiles.b = {
+		x = Width() / 2, y = 0
+	}
+end
+
 function love.load()
 
 	-- reset everything
@@ -37,13 +47,16 @@ function love.load()
 	spawnTimer = 0
 	spawnDelay = 0
 	rails = {}
+	resetBgTiles()
 	bullets = {}
 
 	    -- This is the coordinates where the player character will be rendered.
 	player.x = 100   -- This sets the player at the middle of the screen based on the width of the game window. 
 	player.y = love.graphics.getHeight()/numRails  -- This sets the player at the middle of the screen based on the height of the game window and number of rails. 
 	player.rail = 1
-	player.img = love.graphics.newImage('assets/sprites/placeholder/Placeholder Trolley.png')
+	player.animTimer = 50
+	player.bounceDirection = -2
+	player.img = love.graphics.newImage('assets/sprites/trolley.png')
 	player.ground = player.y     -- This makes the character land on the plaform.
 	player.speed = 200
 	player.facing = 1 -- 1 = right, -1 = left
@@ -52,6 +65,7 @@ function love.load()
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
 	gamestate = gamestates.menu -- change later when main menu added
+	sprites.background = love.graphics.newImage('assets/sprites/placeholder/Placeholder Background.png')
 	sprites.death = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
 	sprites.start = love.graphics.newImage('assets/sprites/start.png')
 	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
@@ -162,6 +176,14 @@ function love.update(dt)
 			end
 		end
 	elseif gamestate == gamestates.alive then
+
+		if (backgroundTiles.b.x <= 0) then -- animate background tiles
+			resetBgTiles()
+		else
+			backgroundTiles.a.x = backgroundTiles.a.x - 2
+			backgroundTiles.b.x = backgroundTiles.b.x - 2
+		end
+
 	--checks if the game is over every tick based on whether you died or not
 		player.fireCooldown = player.fireCooldown - dt
 		if player.fireCooldown < 0 then
@@ -257,6 +279,16 @@ function love.update(dt)
 			end
 		end
 	end
+	
+
+	-- if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
+	-- 	player.animTimer = player.animTimer - 1
+	-- else
+	-- 	player.animTimer = 50
+	-- 	player.x = player.x + player.bounceDirection
+	-- 	player.bounceDirection = -player.bounceDirection
+	-- end
+	-- -----------------
 end
 
 function spawnEnemy()
@@ -305,10 +337,12 @@ function love.draw()
 
 	-- love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
 	if gamestate == gamestates.dead then
-		love.graphics.print("Death", Width() / 2, Height()/2)
+		love.graphics.print("Death", Width() / 2, Height()/2 - 100)
 		love.graphics.draw(sprites.death,0, 0, 0,Width() / sprites.death:getWidth(), Height() / sprites.death:getHeight())
 	end
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
+		love.graphics.draw(sprites.background, backgroundTiles.a.x, backgroundTiles.a.y, 0, 1.5, 1.5)
+		love.graphics.draw(sprites.background, backgroundTiles.b.x, backgroundTiles.b.y, 0, 1.5, 1.5)
 		love.graphics.setColor(1, 1, 1)        -- set rail color to white
 		for i = 1, #rails do
 			for j = 1, #rails[i] do
@@ -328,6 +362,7 @@ function love.draw()
 		end
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
+		
 		for i, enemy in ipairs(enemies) do
 			love.graphics.draw(enemy.img, enemy.x, enemy.y)
 		end
