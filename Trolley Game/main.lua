@@ -89,9 +89,13 @@ end
 function love.keypressed(keyid, key, isrepeat)
 	if gamestate == gamestates.alive then
 		if key == 'w' then
-			player.rail = indexMod(player.rail, -1, numRails) -- sub 1 and mod rails (function to do 1 indexing)
+			if player.rail > 1 then
+				player.rail = player.rail - 1
+			end
 		elseif key == 's' then
-			player.rail = indexMod(player.rail, 1, numRails) -- add 1 mod rails
+			if player.rail < numRails then
+				player.rail = player.rail + 1
+			end
 		elseif key == 'escape' then
 			gamestate = gamestates.paused
 			highlighted = 1
