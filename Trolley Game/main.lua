@@ -1,5 +1,7 @@
 player = {}  
 enemies = {}
+collectibles = {}
+score = 0
 spawnTimer = 0
 spawnDelay = 0
 numRails = 6
@@ -34,10 +36,12 @@ function love.load()
 
 	-- reset everything
 	enemies = {}
+	collectibles = {}
 	spawnTimer = 0
 	spawnDelay = 0
 	rails = {}
 	bullets = {}
+	score = 0
 
 	    -- This is the coordinates where the player character will be rendered.
 	player.x = 100   -- This sets the player at the middle of the screen based on the width of the game window. 
@@ -72,6 +76,20 @@ function love.load()
         	speed = 25
     	}
 	}
+
+	collectibleTypes = {
+    coin = {
+      image = love.graphics.newImage('assets/sprites/coin.png'),
+      speed = 200,
+      collectibleScore = 10
+    },
+    people = {
+      image = love.graphics.newImage('assets/sprites/people.png'),
+      speed = 300,
+      collectibleScore = 300
+    }
+  }
+	
 	railImg = love.graphics.newImage("assets/sprites/rail_tile.png")
 	for i=1, numRails do
 		rails[i] = {}
@@ -163,6 +181,7 @@ function love.update(dt)
 		end
 	elseif gamestate == gamestates.alive then
 	--checks if the game is over every tick based on whether you died or not
+		score = score + dt
 		player.fireCooldown = player.fireCooldown - dt
 		if player.fireCooldown < 0 then
 			player.fireCooldown = 0
@@ -206,6 +225,7 @@ function love.update(dt)
     		spawnTimer = 0
     		spawnDelay = math.random(1, 3)
     		spawnEnemy()
+			spawnCollectible()
 		end
 
 		-- movement
@@ -245,6 +265,33 @@ function love.update(dt)
         	end
     	end
 
+		--COLLECTIBLES
+    -- movement
+    for i, collectible in ipairs(collectibles) do
+
+      if collectible.type == "coin" then
+        collectible.x = collectible.x - collectible.speed * dt
+        -- sound effect code later
+      elseif collectible.type == "people" then
+        collectible.x = collectible.x - collectible.speed * dt
+        -- sound effect code later
+      end
+    end
+    -- reset
+    for i = #collectibles, 1, - 1 do
+      if collectibles[i].x < - 50 then
+        table.remove(collectibles, i)
+      end
+    end
+    --collision check
+    for i, collectible in ipairs(collectibles) do
+      if checkCollision(player, collectible) then
+        score = score + collectible.collectibleScore
+        print(score)
+        table.remove(collectibles, i)
+      end
+    end
+
 		-- rail tile movement
 		for i = 1, #rails do
 			for j = 1, #rails[i] do
@@ -283,6 +330,26 @@ function spawnEnemy()
 
     table.insert(enemies, enemy)
 end
+
+function spawnCollectible()
+  local types = {"coin", "people"}
+  local collectibleType = types[math.random(#types)]
+  local rail = math.random(1, numRails)
+  local data = collectibleTypes[collectibleType]
+
+  local railHeight = getRailHeight()
+  local collectible = {
+    type = collectibleType,
+    x = Width(),
+    speed = data.speed,
+    y = padding + (rail - 0.5) * railHeight - data.image:getHeight(),
+    img = data.image,
+    collectibleScore = data.collectibleScore
+  }
+
+  table.insert(collectibles, collectible)
+end
+
 function bulletHitEnemy(bullet, enemy)
       return bullet.x < enemy.x + enemy.img:getWidth() and
       bullet.x + bullet.width > enemy.x and
@@ -326,11 +393,27 @@ function love.draw()
 				)
 			end
 		end
+
+		--draw score text
+    	-- Get window dimensions
+    	local windowWidth, windowHeight = love.graphics.getDimensions()
+   		-- Get current font height
+    	local font = love.graphics.getFont()
+    	local fontHeight = font:getHeight()
+    	-- Print at X=10 and calculate bottom edge using Y
+    	-- The +0.5 helps with pixel-perfect alignment (optional)
+    	love.graphics.print("Score: " .. score, 10, windowHeight - fontHeight - 5)
+		
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
 		for i, enemy in ipairs(enemies) do
 			love.graphics.draw(enemy.img, enemy.x, enemy.y)
 		end
+
+		for i, collectible in ipairs(collectibles) do
+      		love.graphics.draw(collectible.img, collectible.x, collectible.y)
+    	end
+		
 		-- Draw bullets
 		for i, bullet in ipairs(bullets) do
 			love.graphics.circle(
