@@ -33,10 +33,10 @@ end
 function resetBgTiles()
 	backgroundTiles = {}
 	backgroundTiles.a = {
-		x = -Width()/2, y = 0
+		x = 0, y = 0
 	}
 	backgroundTiles.b = {
-		x = Width() / 2, y = 0
+		x = Width(), y = 0
 	}
 end
 
@@ -65,7 +65,7 @@ function love.load()
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
 	gamestate = gamestates.menu -- change later when main menu added
-	sprites.background = love.graphics.newImage('assets/sprites/placeholder/Placeholder Background.png')
+	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
 	sprites.death = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
 	sprites.start = love.graphics.newImage('assets/sprites/start.png')
 	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
@@ -177,7 +177,7 @@ function love.update(dt)
 		end
 	elseif gamestate == gamestates.alive then
 
-		if (backgroundTiles.b.x <= 0) then -- animate background tiles
+		if (backgroundTiles.b.x == 0) then -- animate background tiles
 			resetBgTiles()
 		else
 			backgroundTiles.a.x = backgroundTiles.a.x - 2
@@ -332,6 +332,8 @@ function love.draw()
 
 	if gamestate == gamestates.menu then
 		love.graphics.setBackgroundColor(150/255, 200/255, 1)
+		love.graphics.print(Width(), 0, 0)
+		love.graphics.print(Height(), 0, 20)
 		love.graphics.draw(sprites.start, Width()/2 - sprites.start:getWidth()/2, Height()/2 - sprites.start:getHeight()/2)
 	end
 
