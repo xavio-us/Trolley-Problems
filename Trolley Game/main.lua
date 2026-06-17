@@ -212,8 +212,8 @@ function love.update(dt)
 		if (backgroundTiles.b.x == 0) then -- animate background tiles
 			resetBgTiles()
 		else
-			backgroundTiles.a.x = backgroundTiles.a.x - 2
-			backgroundTiles.b.x = backgroundTiles.b.x - 2
+			backgroundTiles.a.x = backgroundTiles.a.x - (railSpeed * dt)
+			backgroundTiles.b.x = backgroundTiles.b.x - (railSpeed * dt)
 		end
 
 		--checks if the game is over every tick based on whether you died or not
