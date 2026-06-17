@@ -132,7 +132,7 @@ function love.keypressed(keyid, key, isrepeat)
 			highlighted = indexMod(highlighted, -1, 3) -- num options is 3 right now, change if diff.
 		elseif key == 's' then
 			highlighted = indexMod(highlighted, 1, 3)
-		elseif key == 'space' then
+		elseif key == 'space' or key == 'enter' then
 			if highlighted == 1 then
 				gamestate = gamestates.alive
 			elseif highlighted == 2 then
@@ -173,7 +173,7 @@ function love.update(dt)
 		love.timer.sleep(0.5)
 		gamestate = gamestates.alive
 	elseif gamestate == gamestates.paused then
-		x, y = love.mouse.getPosition()
+		local x, y = love.mouse.getPosition()
 		for i=1,3 do
 			if (x > .40*Width() and x < .60*Width() and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+pauseFont:getHeight()) then
 				highlighted = i
@@ -190,6 +190,23 @@ function love.update(dt)
 				break
 			end
 		end		
+	elseif gamestate == gamestates.dead then
+		local x, y = love.mouse.getPosition()
+		for i=1,2 do
+			if (x > .40*Width() and x < .60*Width() and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+pauseFont:getHeight()) then
+				highlighted = i
+				if love.mouse.isDown(1) then
+					if highlighted == 1 then
+						love.load()
+						gamestate = gamestates.loading
+					elseif highlighted == 2 then
+						love.load()
+						gamestate = gamestates.menu
+					end
+				end
+				break
+			end
+		end
 	elseif gamestate == gamestates.alive then
 
 		if (backgroundTiles.b.x == 0) then -- animate background tiles
@@ -199,7 +216,7 @@ function love.update(dt)
 			backgroundTiles.b.x = backgroundTiles.b.x - 2
 		end
 
-	--checks if the game is over every tick based on whether you died or not
+		--checks if the game is over every tick based on whether you died or not
 		player.fireCooldown = player.fireCooldown - dt
 		if player.fireCooldown < 0 then
 			player.fireCooldown = 0
