@@ -8,6 +8,7 @@ gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4, ["loadi
 gamestate = gamestates.menu -- you should start on the menu
 enemyTypes = {}
 rails = {}
+railSpeed = 300
 bullets = {}
 bulletSpeed = 500
 padding = 40
@@ -25,7 +26,7 @@ end
 function generateRail(i,j)
 	return {
 		img = railImg,
-		x = (j-1)*railImg:getWidth(),
+		x = (j > 1) and rails[i][j-1].x + rails[i][j-1].img:getWidth() or 0,
 		y = padding + (i - 0.5) * getRailHeight() + math.random(-2,2) -- variations to show which rail is which
 	}
 end
@@ -57,8 +58,6 @@ function love.load()
 	player.animTimer = 50
 	player.bounceDirection = -2
 	player.img = love.graphics.newImage('assets/sprites/trolley.png')
-	player.ground = player.y     -- This makes the character land on the plaform.
-	player.speed = 200
 	player.facing = 1 -- 1 = right, -1 = left
 	player.fireRate = 0.25 -- can shoot shoot 4 bullets per second
 	player.fireCooldown = 0
@@ -287,7 +286,7 @@ function love.update(dt)
 		for i = 1, #rails do
 			for j = 1, #rails[i] do
 				local rail = rails[i][j]
-				rail.x = rail.x - 2
+				rail.x = rail.x - railSpeed * dt
 			end
 			if -rails[i][1].x >= rails[i][1].img:getWidth() then
 				table.remove(rails[i], 1)
