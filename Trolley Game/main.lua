@@ -4,7 +4,7 @@ spawnTimer = 0
 spawnDelay = 0
 numRails = 6
 sprites = {}
-gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4}
+gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4, ["loading"] = 5}
 gamestate = gamestates.menu -- you should start on the menu
 enemyTypes = {}
 rails = {}
@@ -64,9 +64,8 @@ function love.load()
 	player.fireCooldown = 0
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
-	gamestate = gamestates.menu -- change later when main menu added
 	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
-	sprites.death = love.graphics.newImage('assets/sprites/placeholder/death.jpg')
+	sprites.death = love.graphics.newImage('assets/sprites/gameover.png')
 	sprites.start = love.graphics.newImage('assets/sprites/start.png')
 	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
 
@@ -138,12 +137,26 @@ function love.keypressed(keyid, key, isrepeat)
 			if highlighted == 1 then
 				gamestate = gamestates.alive
 			elseif highlighted == 2 then
-				gamestate = gamestates.menu
 				love.load()
+				gamestate = gamestates.menu
 				-- maybe reset game here? i dont know
 			elseif highlighted == 3 then
 				-- save data?
 				love.event.quit(0) -- quit gracefully
+			end
+		end
+	elseif gamestate == gamestates.dead then
+		if key == 'w' then
+			highlighted = indexMod(highlighted, -1, 2)
+		elseif key == 's' then
+			highlighted = indexMod(highlighted, 1, 2)
+		elseif key == 'space' or key == 'enter' then
+			if highlighted == 1 then
+				love.load()
+				gamestate = gamestates.loading
+			elseif highlighted == 2 then
+				love.load()
+				gamestate = gamestates.menu
 			end
 		end
 	end
@@ -153,10 +166,13 @@ function love.update(dt)
 		if love.mouse.isDown(1) then
 			x, y = love.mouse.getPosition()
 			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
-				gamestate = gamestates.alive
+				gamestate = gamestates.loading
 				love.graphics.setBackgroundColor(0,0,0)
 			end
 		end
+	elseif gamestate == gamestates.loading then
+		love.timer.sleep(0.5)
+		gamestate = gamestates.alive
 	elseif gamestate == gamestates.paused then
 		x, y = love.mouse.getPosition()
 		for i=1,3 do
@@ -166,15 +182,15 @@ function love.update(dt)
 					if highlighted == 1 then
 						gamestate = gamestates.alive
 					elseif highlighted == 2 then
-						gamestate = gamestates.Menu
 						love.load()
+						gamestate = gamestates.menu
 					elseif highlighted == 3 then
 						love.event.quit(0)
 					end
 				end
 				break
 			end
-		end
+		end		
 	elseif gamestate == gamestates.alive then
 
 		if (backgroundTiles.b.x == 0) then -- animate background tiles
@@ -337,10 +353,25 @@ function love.draw()
 		love.graphics.draw(sprites.start, Width()/2 - sprites.start:getWidth()/2, Height()/2 - sprites.start:getHeight()/2)
 	end
 
+	if gamestate == gamestates.loading then
+		love.graphics.print("Loading...", Width()/2, Height()/2, 0)
+	end
+
 	-- love.graphics.print(gamestate, love.graphics.getWidth() / 2, love.graphics.getHeight()/2)
 	if gamestate == gamestates.dead then
-		love.graphics.print("Death", Width() / 2, Height()/2 - 100)
-		love.graphics.draw(sprites.death,0, 0, 0,Width() / sprites.death:getWidth(), Height() / sprites.death:getHeight())
+		love.graphics.draw(sprites.death, Width()/2 - sprites.death:getWidth()/2, Height()/2 - sprites.death:getHeight(), 0, 1, 1, 1)
+
+		love.graphics.setColor(1,1,1) -- regular white (for now)
+
+		love.graphics.printf("Retry",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
+		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+
+		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		if highlighted > 0 then
+			love.graphics.rectangle("fill", .40*Width(), .50*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+		end
+
+		love.graphics.setColor(1,1,1) -- back to default
 	end
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
 		love.graphics.draw(sprites.background, backgroundTiles.a.x, backgroundTiles.a.y, 0, 1.5, 1.5)
