@@ -25,6 +25,7 @@ laserSpawnTimer = 0
 laserSpawnDelay = 0
 padding = 40
 pauseFont = love.graphics.newFont(32) -- size 32 default font
+scoreFont = love.graphics.newFont(26)
 highlighted = 0 -- which option in a menu is highlighted, 0 means none, 1 is first
 
 function Width()
@@ -656,7 +657,7 @@ function love.draw()
     	local fontHeight = font:getHeight()
     	-- Print at X=10 and calculate bottom edge using Y
     	-- The +0.5 helps with pixel-perfect alignment (optional)
-    	love.graphics.print("Score: " .. score, 10, windowHeight - fontHeight - 5)
+    	love.graphics.print("Score: " .. score, scoreFont, 10, windowHeight - scoreFont:getHeight())
 
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
