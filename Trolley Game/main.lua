@@ -98,7 +98,7 @@ function love.load()
 	gamestate = gamestates.menu -- change later when main menu added
 	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
 	sprites.death = love.graphics.newImage('assets/sprites/gameover.png')
-	sprites.start = love.graphics.newImage('assets/sprites/start_old.png')
+	sprites.start = love.graphics.newImage('assets/sprites/start.png')
 	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
 	sprites.warning = love.graphics.newImage('assets/sprites/warning_placeholder.png')
 	sprites.warningLaser = love.graphics.newImage('assets/sprites/warning_placeholder_laser.png')
@@ -547,7 +547,7 @@ function spawnRocketWarning()
 		-- active (fired) rocket scale and cached dimensions
 		activeScale = 0.17,
 		activeWidth = sprites.rocket:getWidth() * 0.17,
-		activeHeight = sprites.rocket:getHeight() * 0.17,
+		activeHeight = sprites.rocket:getHeight() * 0.17 + 30,
         flashTimer = 0
     }
     table.insert(rockets, rocket)
@@ -692,7 +692,7 @@ function love.draw()
 		end
 		love.graphics.setColor(1, 1, 1)		
 		for i, collectible in ipairs(collectibles) do
-      		love.graphics.draw(collectible.img, collectible.x, collectible.y)
+      		love.graphics.draw(collectible.img, collectible.x, collectible.y+40, 0, 0.75,0.75)
     	end
 		-- Draw bullets
 		for i, bullet in ipairs(bullets) do
