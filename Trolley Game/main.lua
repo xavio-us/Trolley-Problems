@@ -42,7 +42,7 @@ function generateRail(i,j)
 	}
 
  	-- 3% chance of becoming a barrier
-    if math.random() < 0.01 then
+    if math.random() < 0.03 then
         tile.img = barrierImg
         tile.type = "barrier"
     else
@@ -98,11 +98,12 @@ function love.load()
 	gamestate = gamestates.menu -- change later when main menu added
 	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
 	sprites.death = love.graphics.newImage('assets/sprites/gameover.png')
-	sprites.start = love.graphics.newImage('assets/sprites/start.png')
+	sprites.start = love.graphics.newImage('assets/sprites/start_old.png')
 	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
 	sprites.warning = love.graphics.newImage('assets/sprites/warning_placeholder.png')
 	sprites.warningLaser = love.graphics.newImage('assets/sprites/warning_placeholder_laser.png')
 	sprites.rocket = love.graphics.newImage('assets/sprites/rocket.png')
+	sprites.menu = love.graphics.newImage('assets/sprites/title_screen.png')
 
 	enemyTypes = {
     	basic = {
@@ -217,7 +218,6 @@ function love.update(dt)
 			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
 				gamestate = gamestates.loading
 				gamestate = gamestates.alive
-				love.graphics.setBackgroundColor(0,0,0)
 			end
 		end
 	elseif gamestate == gamestates.loading then
@@ -586,9 +586,9 @@ end
 function checkCollision(a, b)
 	--checks the enemy posistion versus the posistion of the player
 	local aw = a.width or (a.img and a.img:getWidth()) or 0
-	local ah = a.height or (a.img and a.img:getHeight()) or 0
+	local ah = 80
 	local bw = b.width or (b.img and b.img:getWidth()) or 0
-	local bh = b.height or (b.img and b.img:getHeight()) or 0
+	local bh = 80
 	return a.x < b.x + bw and
 		   a.x + aw > b.x and
 		   a.y < b.y + bh and
@@ -598,7 +598,7 @@ end
 function love.draw()
 
 	if gamestate == gamestates.menu then
-		love.graphics.setBackgroundColor(150/255, 200/255, 1)
+		love.graphics.draw(sprites.menu, 0, 0)
 		love.graphics.print(Width(), 0, 0)
 		love.graphics.print(Height(), 0, 20)
 		love.graphics.draw(sprites.start, Width()/2 - sprites.start:getWidth()/2, Height()/2 - sprites.start:getHeight()/2)
@@ -627,6 +627,10 @@ function love.draw()
 		love.graphics.draw(sprites.background, backgroundTiles.b.x, backgroundTiles.b.y, 0, 1.5, 1.5)
 		love.graphics.setColor(1, 1, 1)        -- set rail color to white
 	
+		-- love.graphics.setColor(1,0,0) -- hitbox height debugging
+		-- love.graphics.rectangle('fill', 800, 400, 80, 80)
+		-- love.graphics.setColor(0,0,0)
+
 		for i = 1, #rails do
 			for j = 1, #rails[i] do
 				local rail = rails[i][j]
