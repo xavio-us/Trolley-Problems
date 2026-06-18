@@ -76,6 +76,8 @@ function love.load()
 	bullets = {}
 	score = 0
 
+    love.window.setTitle("Trolley Troubles")
+
 	    -- This is the coordinates where the player character will be rendered.
 	player.x = 100   -- This sets the player at the middle of the screen based on the width of the game window. 
 	player.y = love.graphics.getHeight()/numRails  -- This sets the player at the middle of the screen based on the height of the game window and number of rails. 
