@@ -450,43 +450,43 @@ function love.update(dt)
 				rails[i][#rails[i]+1] = generateRail(i,#rails[i]+1)
 			end
 		end
-	end
 		--COLLECTIBLES
-    -- movement
-    for i, collectible in ipairs(collectibles) do
+		-- movement
+		for i, collectible in ipairs(collectibles) do
 
-      if collectible.type == "coin" then
-        collectible.x = collectible.x - collectible.speed * dt
-        -- sound effect code later
-      elseif collectible.type == "people" then
-        collectible.x = collectible.x - collectible.speed * dt
-        -- sound effect code later
-      end
-    end
-    -- reset
-    for i = #collectibles, 1, - 1 do
-      if collectibles[i].x < - 50 then
-        table.remove(collectibles, i)
-      end
-    end
-    --collision check
-    for i, collectible in ipairs(collectibles) do
-      if checkCollision(player, collectible) then
-        score = score + collectible.collectibleScore
-        print(score)
-        table.remove(collectibles, i)
-      end
-    end
+		if collectible.type == "coin" then
+			collectible.x = collectible.x - collectible.speed * dt
+			-- sound effect code later
+		elseif collectible.type == "people" then
+			collectible.x = collectible.x - collectible.speed * dt
+			-- sound effect code later
+		end
+		end
+		-- reset
+		for i = #collectibles, 1, - 1 do
+		if collectibles[i].x < - 50 then
+			table.remove(collectibles, i)
+		end
+		end
+		--collision check
+		for i, collectible in ipairs(collectibles) do
+		if checkCollision(player, collectible) then
+			score = score + collectible.collectibleScore
+			print(score)
+			table.remove(collectibles, i)
+		end
+		end
 
 
-	-- if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
-	-- 	player.animTimer = player.animTimer - 1
-	-- else
-	-- 	player.animTimer = 50
-	-- 	player.x = player.x + player.bounceDirection
-	-- 	player.bounceDirection = -player.bounceDirection
-	-- end
-	-- -----------------
+		-- if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
+		-- 	player.animTimer = player.animTimer - 1
+		-- else
+		-- 	player.animTimer = 50
+		-- 	player.x = player.x + player.bounceDirection
+		-- 	player.bounceDirection = -player.bounceDirection
+		-- end
+		-- -----------------
+	end
 end
 function spawnCollectible()
   local types = {"coin", "people"}
