@@ -83,7 +83,7 @@ function love.load()
 	player.y = love.graphics.getHeight()/numRails  -- This sets the player at the middle of the screen based on the height of the game window and number of rails. 
 	player.rail = 1
 	player.animTimer = 50
-	player.bounceDirection = -2
+	player.bounceDirection = -4
 	player.img = love.graphics.newImage('assets/sprites/trolley.png')
 	player.ground = player.y     -- This makes the character land on the plaform.
 	player.speed = 200
@@ -102,11 +102,24 @@ function love.load()
 	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
 	sprites.death = love.graphics.newImage('assets/sprites/gameover.png')
 	sprites.start = love.graphics.newImage('assets/sprites/start.png')
-	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
+	sprites.paused = love.graphics.newImage('assets/sprites/paused.png')
 	sprites.warning = love.graphics.newImage('assets/sprites/warning_placeholder.png')
 	sprites.warningLaser = love.graphics.newImage('assets/sprites/warning_placeholder_laser.png')
 	sprites.rocket = love.graphics.newImage('assets/sprites/rocket.png')
 	sprites.menu = love.graphics.newImage('assets/sprites/title_screen.png')
+	sprites.resume = love.graphics.newImage('assets/sprites/resume.png')
+	sprites.resume_sel = love.graphics.newImage('assets/sprites/resume_selected.png')
+	sprites.retry = love.graphics.newImage('assets/sprites/retry.png')
+	sprites.retry_sel = love.graphics.newImage('assets/sprites/retry_selected.png')
+	sprites.quit = love.graphics.newImage('assets/sprites/quit.png')
+	sprites.quit_sel = love.graphics.newImage('assets/sprites/quit_selected.png')
+	sprites.mainmenu = love.graphics.newImage('assets/sprites/menu.png')
+	sprites.mainmenu_sel = love.graphics.newImage('assets/sprites/menu_selected.png')
+	sprites.laser_active = love.graphics.newImage('assets/sprites/laser_active.png')
+	sprites.laser_inactive = love.graphics.newImage('assets/sprites/laser_inactive.png')
+	sprites.laser_warning = love.graphics.newImage('assets/sprites/warning_1.png')
+	sprites.rocket_warning = love.graphics.newImage('assets/sprites/warning_2.png')
+	sprites.score_area = love.graphics.newImage('assets/sprites/score_area.png')
 
 	enemyTypes = {
     	basic = {
@@ -115,7 +128,9 @@ function love.load()
     	},
 
     	dasher = {
-        	image = love.graphics.newImage("assets/sprites/placeholder/dasher.png"),
+        	image = love.graphics.newImage("assets/sprites/handcar_1.png"),
+			image2 = love.graphics.newImage("assets/sprites/handcar_2.png"),
+			dash = love.graphics.newImage("assets/sprites/handcar_dash.png"),
         	speed = 50
     	},
 
@@ -229,7 +244,7 @@ function love.update(dt)
 	elseif gamestate == gamestates.paused then
 		local x, y = love.mouse.getPosition()
 		for i=1,3 do
-			if (x > .40*Width() and x < .60*Width() and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+pauseFont:getHeight()) then
+			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+sprites.resume:getHeight()) then
 				highlighted = i
 				if love.mouse.isDown(1) then
 					if highlighted == 1 then
@@ -247,7 +262,7 @@ function love.update(dt)
 	elseif gamestate == gamestates.dead then
 		local x, y = love.mouse.getPosition()
 		for i=1,2 do
-			if (x > .40*Width() and x < .60*Width() and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+pauseFont:getHeight()) then
+			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+sprites.resume:getHeight()) then
 				highlighted = i
 				if love.mouse.isDown(1) then
 					if highlighted == 1 then
@@ -262,6 +277,8 @@ function love.update(dt)
 			end
 		end
 	elseif gamestate == gamestates.alive then
+
+
 
 		-- animate background tiles and wrap when a tile moves fully off-screen
 		local bgScale = 1.5
@@ -478,14 +495,14 @@ function love.update(dt)
 		end
 
 
-		-- if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
-		-- 	player.animTimer = player.animTimer - 1
-		-- else
-		-- 	player.animTimer = 50
-		-- 	player.x = player.x + player.bounceDirection
-		-- 	player.bounceDirection = -player.bounceDirection
-		-- end
-		-- -----------------
+		if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
+			player.animTimer = player.animTimer - 1
+		else
+			player.animTimer = 50
+			player.x = player.x + player.bounceDirection
+			player.bounceDirection = -player.bounceDirection
+		end
+		-----------------
 	end
 end
 function spawnCollectible()
@@ -544,7 +561,7 @@ function spawnRocketWarning()
         speed = rocketSpeed,
         state = "warning",
         timer = rocketWarningDuration,
-        warningImg = sprites.warning,
+        warningImg = sprites.rocket_warning,
         img = sprites.rocket,
         rail = rail,
 		-- active (fired) rocket scale and cached dimensions
@@ -573,7 +590,7 @@ function spawnLaserWarning()
         timer = laserWarningDuration,
         activeDuration = 0.2,
         activeTimer = 0,
-        img = sprites.warningLaser,
+        img = sprites.laser_warning,
         rail = rail,
         flashTimer = 0
     }
@@ -613,17 +630,21 @@ function love.draw()
 	if gamestate == gamestates.dead then
 		love.graphics.draw(sprites.death, Width()/2 - sprites.death:getWidth()/2, Height()/2 - sprites.death:getHeight(), 0, 1, 1, 1)
 
-		love.graphics.setColor(1,1,1) -- regular white (for now)
+		-- love.graphics.setColor(1,1,1) -- regular white (for now)
 
-		love.graphics.printf("Retry",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
-		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+		love.graphics.draw(sprites.retry,Width()/2 - sprites.retry:getWidth()/2,.60*Height())
+		love.graphics.draw(sprites.mainmenu,Width()/2 - sprites.mainmenu:getWidth()/2,.70*Height())
 
-		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		-- love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
 		if highlighted > 0 then
-			love.graphics.rectangle("fill", .40*Width(), .50*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+			if highlighted == 1 then
+				love.graphics.draw(sprites.retry_sel,Width()/2 - sprites.retry_sel:getWidth()/2,.60*Height())
+			elseif highlighted == 2 then
+				love.graphics.draw(sprites.mainmenu_sel,Width()/2 - sprites.mainmenu_sel:getWidth()/2,.70*Height())
+			end
 		end
 
-		love.graphics.setColor(1,1,1) -- back to default
+		-- love.graphics.setColor(1,1,1) -- back to default
 	end
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
 		love.graphics.draw(sprites.background, backgroundTiles.a.x, backgroundTiles.a.y, 0, 1.5, 1.5)
@@ -663,6 +684,7 @@ function love.draw()
 
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
+
 		
 		for i, enemy in ipairs(enemies) do
 			love.graphics.draw(enemy.img, enemy.x, enemy.y)
@@ -715,16 +737,22 @@ function love.draw()
 		love.graphics.setColor(1,1,1) -- regular white (for now)
 
 		love.graphics.draw(sprites.paused, Width()/2 - sprites.paused:getWidth()/2, .25*Height() - sprites.paused:getHeight()/2)
-		love.graphics.printf("Continue" ,pauseFont,.25*Width(),.50*Height(),.50*Width(),"center")
-		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
-		love.graphics.printf("Quit"     ,pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+		love.graphics.draw(sprites.resume,Width()/2 - sprites.resume:getWidth()/2,.50*Height())
+		love.graphics.draw(sprites.mainmenu,Width()/2 - sprites.mainmenu:getWidth()/2,.60*Height())
+		love.graphics.draw(sprites.quit,Width()/2 - sprites.quit:getWidth()/2,.70*Height())
 
-		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		-- love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
 		if highlighted > 0 then
-			love.graphics.rectangle("fill", .40*Width(), .40*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+			if highlighted == 1 then
+				love.graphics.draw(sprites.resume_sel,Width()/2 - sprites.resume:getWidth()/2,.50*Height())
+			elseif highlighted == 2 then
+				love.graphics.draw(sprites.mainmenu_sel,Width()/2 - sprites.mainmenu:getWidth()/2,.60*Height())
+			elseif highlighted == 3 then
+				love.graphics.draw(sprites.quit_sel,Width()/2 - sprites.quit:getWidth()/2,.70*Height())
+			end
 		end
 
-		love.graphics.setColor(1,1,1) -- back to default
+		-- love.graphics.setColor(1,1,1) -- back to default
 
 	end
 end
