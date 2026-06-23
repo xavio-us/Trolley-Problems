@@ -630,17 +630,21 @@ function love.draw()
 	if gamestate == gamestates.dead then
 		love.graphics.draw(sprites.death, Width()/2 - sprites.death:getWidth()/2, Height()/2 - sprites.death:getHeight(), 0, 1, 1, 1)
 
-		love.graphics.setColor(1,1,1) -- regular white (for now)
+		-- love.graphics.setColor(1,1,1) -- regular white (for now)
 
-		love.graphics.printf("Retry",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
-		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+		love.graphics.draw(sprites.retry,Width()/2 - sprites.retry:getWidth()/2,.60*Height())
+		love.graphics.draw(sprites.mainmenu,Width()/2 - sprites.mainmenu:getWidth()/2,.70*Height())
 
-		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		-- love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
 		if highlighted > 0 then
-			love.graphics.rectangle("fill", .40*Width(), .50*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+			if highlighted == 1 then
+				love.graphics.draw(sprites.retry_sel,Width()/2 - sprites.retry_sel:getWidth()/2,.60*Height())
+			elseif highlighted == 2 then
+				love.graphics.draw(sprites.mainmenu_sel,Width()/2 - sprites.mainmenu_sel:getWidth()/2,.70*Height())
+			end
 		end
 
-		love.graphics.setColor(1,1,1) -- back to default
+		-- love.graphics.setColor(1,1,1) -- back to default
 	end
 	if gamestate == gamestates.alive or gamestate == gamestates.paused then
 		love.graphics.draw(sprites.background, backgroundTiles.a.x, backgroundTiles.a.y, 0, 1.5, 1.5)
@@ -733,16 +737,22 @@ function love.draw()
 		love.graphics.setColor(1,1,1) -- regular white (for now)
 
 		love.graphics.draw(sprites.paused, Width()/2 - sprites.paused:getWidth()/2, .25*Height() - sprites.paused:getHeight()/2)
-		love.graphics.printf("Continue" ,pauseFont,.25*Width(),.50*Height(),.50*Width(),"center")
-		love.graphics.printf("Main Menu",pauseFont,.25*Width(),.60*Height(),.50*Width(),"center")
-		love.graphics.printf("Quit"     ,pauseFont,.25*Width(),.70*Height(),.50*Width(),"center")
+		love.graphics.draw(sprites.resume,Width()/2 - sprites.resume:getWidth()/2,.50*Height())
+		love.graphics.draw(sprites.mainmenu,Width()/2 - sprites.mainmenu:getWidth()/2,.60*Height())
+		love.graphics.draw(sprites.quit,Width()/2 - sprites.quit:getWidth()/2,.70*Height())
 
-		love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
+		-- love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
 		if highlighted > 0 then
-			love.graphics.rectangle("fill", .40*Width(), .40*Height()+.10*Height()*highlighted, .20*Width(), pauseFont:getHeight())
+			if highlighted == 1 then
+				love.graphics.draw(sprites.resume_sel,Width()/2 - sprites.resume:getWidth()/2,.50*Height())
+			elseif highlighted == 2 then
+				love.graphics.draw(sprites.mainmenu_sel,Width()/2 - sprites.mainmenu:getWidth()/2,.60*Height())
+			elseif highlighted == 3 then
+				love.graphics.draw(sprites.quit_sel,Width()/2 - sprites.quit:getWidth()/2,.70*Height())
+			end
 		end
 
-		love.graphics.setColor(1,1,1) -- back to default
+		-- love.graphics.setColor(1,1,1) -- back to default
 
 	end
 end
