@@ -244,7 +244,7 @@ function love.update(dt)
 	elseif gamestate == gamestates.paused then
 		local x, y = love.mouse.getPosition()
 		for i=1,3 do
-			if (x > .40*Width() and x < .60*Width() and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+pauseFont:getHeight()) then
+			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+sprites.resume:getHeight()) then
 				highlighted = i
 				if love.mouse.isDown(1) then
 					if highlighted == 1 then
@@ -262,7 +262,7 @@ function love.update(dt)
 	elseif gamestate == gamestates.dead then
 		local x, y = love.mouse.getPosition()
 		for i=1,2 do
-			if (x > .40*Width() and x < .60*Width() and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+pauseFont:getHeight()) then
+			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+sprites.resume:getHeight()) then
 				highlighted = i
 				if love.mouse.isDown(1) then
 					if highlighted == 1 then
