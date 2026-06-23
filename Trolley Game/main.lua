@@ -83,7 +83,7 @@ function love.load()
 	player.y = love.graphics.getHeight()/numRails  -- This sets the player at the middle of the screen based on the height of the game window and number of rails. 
 	player.rail = 1
 	player.animTimer = 50
-	player.bounceDirection = -2
+	player.bounceDirection = -4
 	player.img = love.graphics.newImage('assets/sprites/trolley.png')
 	player.ground = player.y     -- This makes the character land on the plaform.
 	player.speed = 200
@@ -102,11 +102,24 @@ function love.load()
 	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
 	sprites.death = love.graphics.newImage('assets/sprites/gameover.png')
 	sprites.start = love.graphics.newImage('assets/sprites/start.png')
-	sprites.paused = love.graphics.newImage('assets/sprites/placeholder/paused.png')
+	sprites.paused = love.graphics.newImage('assets/sprites/paused.png')
 	sprites.warning = love.graphics.newImage('assets/sprites/warning_placeholder.png')
 	sprites.warningLaser = love.graphics.newImage('assets/sprites/warning_placeholder_laser.png')
 	sprites.rocket = love.graphics.newImage('assets/sprites/rocket.png')
 	sprites.menu = love.graphics.newImage('assets/sprites/title_screen.png')
+	sprites.resume = love.graphics.newImage('assets/sprites/resume.png')
+	sprites.resume_sel = love.graphics.newImage('assets/sprites/resume_selected.png')
+	sprites.retry = love.graphics.newImage('assets/sprites/retry.png')
+	sprites.retry_sel = love.graphics.newImage('assets/sprites/retry_selected.png')
+	sprites.quit = love.graphics.newImage('assets/sprites/quit.png')
+	sprites.quit_sel = love.graphics.newImage('assets/sprites/quit_selected.png')
+	sprites.mainmenu = love.graphics.newImage('assets/sprites/menu.png')
+	sprites.mainmenu_sel = love.graphics.newImage('assets/sprites/menu_selected.png')
+	sprites.laser_active = love.graphics.newImage('assets/sprites/laser_active.png')
+	sprites.laser_inactive = love.graphics.newImage('assets/sprites/laser_inactive.png')
+	sprites.laser_warning = love.graphics.newImage('assets/sprites/warning_1.png')
+	sprites.rocket_warning = love.graphics.newImage('assets/sprites/warning_2.png')
+	sprites.score_area = love.graphics.newImage('assets/sprites/score_area.png')
 
 	enemyTypes = {
     	basic = {
@@ -115,7 +128,9 @@ function love.load()
     	},
 
     	dasher = {
-        	image = love.graphics.newImage("assets/sprites/placeholder/dasher.png"),
+        	image = love.graphics.newImage("assets/sprites/handcar_1.png"),
+			image2 = love.graphics.newImage("assets/sprites/handcar_2.png"),
+			dash = love.graphics.newImage("assets/sprites/handcar_dash.png"),
         	speed = 50
     	},
 
@@ -262,6 +277,8 @@ function love.update(dt)
 			end
 		end
 	elseif gamestate == gamestates.alive then
+
+
 
 		-- animate background tiles and wrap when a tile moves fully off-screen
 		local bgScale = 1.5
@@ -478,14 +495,14 @@ function love.update(dt)
 		end
 
 
-		-- if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
-		-- 	player.animTimer = player.animTimer - 1
-		-- else
-		-- 	player.animTimer = 50
-		-- 	player.x = player.x + player.bounceDirection
-		-- 	player.bounceDirection = -player.bounceDirection
-		-- end
-		-- -----------------
+		if player.animTimer > 0 then -- This controls the trolley's "bouncing" animation on the tracks
+			player.animTimer = player.animTimer - 1
+		else
+			player.animTimer = 50
+			player.x = player.x + player.bounceDirection
+			player.bounceDirection = -player.bounceDirection
+		end
+		-----------------
 	end
 end
 function spawnCollectible()
@@ -544,7 +561,7 @@ function spawnRocketWarning()
         speed = rocketSpeed,
         state = "warning",
         timer = rocketWarningDuration,
-        warningImg = sprites.warning,
+        warningImg = sprites.rocket_warning,
         img = sprites.rocket,
         rail = rail,
 		-- active (fired) rocket scale and cached dimensions
@@ -573,7 +590,7 @@ function spawnLaserWarning()
         timer = laserWarningDuration,
         activeDuration = 0.2,
         activeTimer = 0,
-        img = sprites.warningLaser,
+        img = sprites.laser_warning,
         rail = rail,
         flashTimer = 0
     }
@@ -663,6 +680,7 @@ function love.draw()
 
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
+
 		
 		for i, enemy in ipairs(enemies) do
 			love.graphics.draw(enemy.img, enemy.x, enemy.y)
