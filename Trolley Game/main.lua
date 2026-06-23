@@ -66,6 +66,12 @@ end
 
 function love.load()
 
+	-- load sound effects
+	screamSound = love.audio.newSource("assets/sounds/scream.mp3", "static")
+	crashSound = love.audio.newSource("assets/sounds/crash.mp3", "static")
+	coinSound = love.audio.newSource("assets/sounds/coin.mp3", "static")
+	shootSound = love.audio.newSource("assets/sounds/shoot.mp3", "static")
+
 	-- reset everything
 	enemies = {}
 	collectibles = {}
@@ -143,12 +149,14 @@ function love.load()
     	coin = {
       		image = love.graphics.newImage('assets/sprites/coin.png'),
       		speed = 200,
-      		collectibleScore = 10
+      		collectibleScore = 10,
+			sound = coinSound
     	},
     	people = {
       		image = love.graphics.newImage('assets/sprites/people.png'),
       		speed = 300,
-      		collectibleScore = 300
+      		collectibleScore = 300,
+			sound = screamSound
     	}
   	}
 	railImg = love.graphics.newImage("assets/sprites/rail_tile.png")
@@ -191,6 +199,8 @@ function love.keypressed(keyid, key, isrepeat)
       			speed = bulletSpeed
     		}
     		table.insert(bullets, bullet)
+			local shootSound = shootSound:clone()
+        	love.audio.play(shootSound)
     		player.fireCooldown = player.fireRate
   		end
 	elseif gamestate == gamestates.paused then
@@ -436,6 +446,7 @@ function love.update(dt)
 		--collision check
 		for i, enemy in ipairs(enemies) do
         	if checkCollision(player, enemy) then
+				love.audio.play(crashSound)
             	gamestate = gamestates.dead
         	end
     	end
@@ -451,6 +462,7 @@ function love.update(dt)
             		}
 
             		if checkCollision(player, barrier) then
+						love.audio.play(crashSound)
                 		gamestate = gamestates.dead
             		end
         		end
@@ -473,10 +485,8 @@ function love.update(dt)
 
 		if collectible.type == "coin" then
 			collectible.x = collectible.x - collectible.speed * dt
-			-- sound effect code later
 		elseif collectible.type == "people" then
 			collectible.x = collectible.x - collectible.speed * dt
-			-- sound effect code later
 		end
 		end
 		-- reset
@@ -489,6 +499,7 @@ function love.update(dt)
 		for i, collectible in ipairs(collectibles) do
 		if checkCollision(player, collectible) then
 			score = score + collectible.collectibleScore
+			love.audio.play(collectible.sound)
 			print(score)
 			table.remove(collectibles, i)
 		end
@@ -518,7 +529,8 @@ function spawnCollectible()
     speed = data.speed,
     y = padding + (rail - 0.5) * railHeight - data.image:getHeight(),
     img = data.image,
-    collectibleScore = data.collectibleScore
+    collectibleScore = data.collectibleScore,
+	sound = data.sound
   }
 
   table.insert(collectibles, collectible)
@@ -756,4 +768,3 @@ function love.draw()
 
 	end
 end
-
