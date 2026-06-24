@@ -302,7 +302,7 @@ function love.update(dt)
 			backgroundTiles.b.x = backgroundTiles.a.x + bgW
 		end
 
-	--checks if the game is over every tick based on whether you died or not
+		--checks if the game is over every tick based on whether you died or not
 		score = score + dt
 		player.fireCooldown = player.fireCooldown - dt
 		if player.fireCooldown < 0 then
@@ -355,8 +355,6 @@ function love.update(dt)
       			table.remove(bullets, i)
     		end
   		end
-		
-	end
 		-- spawn delay and spawn system
 		spawnTimer = spawnTimer + dt
 
@@ -548,6 +546,8 @@ function love.update(dt)
 		end
 		-----------------
 	end
+end
+
 function spawnCollectible()
   local types = {"people"}
   local collectibleType = types[math.random(#types)]
@@ -747,8 +747,7 @@ function love.draw()
    		-- Get current font height
     	local font = love.graphics.getFont()
     	local fontHeight = font:getHeight()
-    	-- Print at X=10 and calculate bottom edge using Y
-    	love.graphics.print("Score: " .. score, scoreFont, 10, windowHeight - scoreFont:getHeight())
+    	
 
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
 		love.graphics.draw(player.img, player.x, player.y)
@@ -811,6 +810,9 @@ function love.draw()
 			local ox = bullet.owner == "enemy" and bullet.img:getWidth() or 0
 			love.graphics.draw(bullet.img, bullet.x, bullet.y, 0, sx, 1, ox, 0)
 		end
+
+		-- Print at 80% away across the screen & top right
+    	love.graphics.print("Score: " .. math.floor(score), scoreFont, .80*Width(), scoreFont:getHeight())
 	end
 	if gamestate == gamestates.paused then
 		love.graphics.setColor(0,0,0,0.85) -- high alpha black rectangle over the whole screen
