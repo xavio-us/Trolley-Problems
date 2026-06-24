@@ -15,7 +15,7 @@ bullets = {}
 rockets = {}
 lasers = {}
 bulletSpeed = 500
-rocketSpeed = 450
+rocketSpeed = 750
 laserSpeed = 700
 rocketWarningDuration = 1.4
 laserWarningDuration = 1.0
@@ -43,7 +43,7 @@ function generateRail(i,j)
 	}
 
  	-- 3% chance of becoming a barrier
-    if math.random() < 0.03 then
+    if math.random() < 0.03  and timeSinceStart > 1 then
         tile.img = barrierImg
         tile.type = "barrier"
     else
@@ -66,6 +66,9 @@ end
 
 function love.load()
 
+	anim8 = require 'libraries/anim8'
+	
+
 	-- reset everything
 	enemies = {}
 	collectibles = {}
@@ -75,6 +78,8 @@ function love.load()
 	resetBgTiles()
 	bullets = {}
 	score = 0
+	timeSinceStart = 0
+	animationTimer = 0
 
     love.window.setTitle("Trolley Troubles")
 
@@ -121,6 +126,7 @@ function love.load()
 	sprites.rocket_warning = love.graphics.newImage('assets/sprites/warning_2.png')
 	sprites.score_area = love.graphics.newImage('assets/sprites/score_area.png')
 
+
 	enemyTypes = {
     	basic = {
         	image = love.graphics.newImage("assets/sprites/placeholder/red.png"),
@@ -128,8 +134,7 @@ function love.load()
     	},
 
     	dasher = {
-        	image = love.graphics.newImage("assets/sprites/handcar_1.png"),
-			image2 = love.graphics.newImage("assets/sprites/handcar_2.png"),
+        	image = love.graphics.newImage("assets/sprites/handcar_sheet.png"),
 			dash = love.graphics.newImage("assets/sprites/handcar_dash.png"),
         	speed = 50
     	},
@@ -151,6 +156,12 @@ function love.load()
       		collectibleScore = 300
     	}
   	}
+	--Handcar animation setup
+	enemyTypes.dasher.grid = anim8.newGrid(168, 156, enemyTypes.dasher.image:getWidth(), enemyTypes.dasher.image:getHeight())
+	enemyTypes.dasher.animations = {}
+	enemyTypes.dasher.animations.move = anim8.newAnimation(enemyTypes.dasher.grid('1-2', 1), 0.8)
+
+
 	railImg = love.graphics.newImage("assets/sprites/rail_tile.png")
 	barrierImg = love.graphics.newImage("assets/sprites/barrier.png")
 	for i=1, numRails do
@@ -251,7 +262,7 @@ function love.update(dt)
 						gamestate = gamestates.alive
 					elseif highlighted == 2 then
 						love.load()
-						gamestate = gamestates.Menu
+						gamestate = gamestates.menu
 					elseif highlighted == 3 then
 						love.event.quit(0)
 					end
@@ -278,7 +289,7 @@ function love.update(dt)
 		end
 	elseif gamestate == gamestates.alive then
 
-
+		timeSinceStart = timeSinceStart + dt
 
 		-- animate background tiles and wrap when a tile moves fully off-screen
 		local bgScale = 1.5
@@ -387,6 +398,8 @@ function love.update(dt)
         		table.remove(enemies, i)
     		end
 		end
+
+		enemyTypes.dasher.animations.move:update(dt)
 
 		-- rocket warning countdown and active rocket movement
 		for i = #rockets, 1, -1 do
@@ -687,7 +700,15 @@ function love.draw()
 
 		
 		for i, enemy in ipairs(enemies) do
-			love.graphics.draw(enemy.img, enemy.x, enemy.y)
+			if enemy.type == "dasher" then
+				if enemy.dashTimer <= 0 then
+					enemyTypes.dasher.animations.move:draw(enemyTypes.dasher.image, enemy.x, enemy.y)
+				else
+					love.graphics.draw(enemyTypes.dasher.dash, enemy.x, enemy.y)
+				end
+			else
+				love.graphics.draw(enemy.img, enemy.x, enemy.y)
+			end
 		end
 
 		for i, rocket in ipairs(rockets) do
