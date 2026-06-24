@@ -1,4 +1,4 @@
-player = {}  
+﻿player = {}  
 enemies = {}
 collectibles = {}
 score = 0
@@ -12,6 +12,7 @@ enemyTypes = {}
 rails = {}
 railSpeed = 300
 bullets = {}
+enemyBullets = {}
 rockets = {}
 lasers = {}
 bulletSpeed = 500
@@ -19,10 +20,11 @@ rocketSpeed = 750
 laserSpeed = 700
 rocketWarningDuration = 1.4
 laserWarningDuration = 1.0
-rocketSpawnTimer = 0
-rocketSpawnDelay = 0
-laserSpawnTimer = 0
-laserSpawnDelay = 0
+laserInactiveDuration = 1.4
+barrierEnemyCooldown = 0
+barrierEnemyDelay = 0.5
+threatSpawnTimer = 0
+threatSpawnDelay = 0
 padding = 40
 pauseFont = love.graphics.newFont(32) -- size 32 default font
 scoreFont = love.graphics.newFont(26)
@@ -39,13 +41,14 @@ end
 function generateRail(i,j)
 	local tile = {
 		x = (j > 1) and rails[i][j-1].x + rails[i][j-1].img:getWidth() or 0,
-		y=padding + (i - 0.5) * getRailHeight() + math.random(-2,2)
+		y=padding + (i) * getRailHeight() + math.random(-2,2)
 	}
 
  	-- 3% chance of becoming a barrier
-    if math.random() < 0.03  and timeSinceStart > 1 then
+    if math.random() < 0.03 and timeSinceStart > 1 and barrierEnemyCooldown <= 0 then
         tile.img = barrierImg
         tile.type = "barrier"
+        barrierEnemyCooldown = barrierEnemyDelay
     else
         tile.img = railImg
         tile.type = "rail"
@@ -68,7 +71,7 @@ function love.load()
 
 	anim8 = require 'libraries/anim8'
 	
-
+	
 	-- reset everything
 	enemies = {}
 	collectibles = {}
@@ -90,7 +93,9 @@ function love.load()
 	player.animTimer = 50
 	player.bounceDirection = -4
 	player.img = love.graphics.newImage('assets/sprites/trolley.png')
-	player.ground = player.y     -- This makes the character land on the plaform.
+	player.width = player.img:getWidth()
+	player.height = player.img:getHeight()
+	player.ground = player.y     -- This makes the character land on the platform.
 	player.speed = 200
 	player.facing = 1 -- 1 = right, -1 = left
 	player.fireRate = 0.25 -- can shoot shoot 4 bullets per second
@@ -98,11 +103,10 @@ function love.load()
 	spawnTimer = 0
 	spawnDelay = math.random(1, 3)
 	rockets = {}
-	rocketSpawnTimer = 0
-	rocketSpawnDelay = math.random(4, 7)
 	lasers = {}
-	laserSpawnTimer = 0
-	laserSpawnDelay = math.random(5, 9)
+	barrierEnemyCooldown = 0
+	threatSpawnTimer = 0
+	threatSpawnDelay = math.random(3, 6)
 	gamestate = gamestates.menu -- change later when main menu added
 	sprites.background = love.graphics.newImage('assets/sprites/background_texture.png')
 	sprites.death = love.graphics.newImage('assets/sprites/gameover.png')
@@ -111,6 +115,8 @@ function love.load()
 	sprites.warning = love.graphics.newImage('assets/sprites/warning_placeholder.png')
 	sprites.warningLaser = love.graphics.newImage('assets/sprites/warning_placeholder_laser.png')
 	sprites.rocket = love.graphics.newImage('assets/sprites/rocket.png')
+	sprites.bullet = love.graphics.newImage('assets/sprites/bullet.png')
+	sprites.enemy_bullet = love.graphics.newImage('assets/sprites/enemy_bullet.png')
 	sprites.menu = love.graphics.newImage('assets/sprites/title_screen.png')
 	sprites.resume = love.graphics.newImage('assets/sprites/resume.png')
 	sprites.resume_sel = love.graphics.newImage('assets/sprites/resume_selected.png')
@@ -128,10 +134,6 @@ function love.load()
 
 
 	enemyTypes = {
-    	basic = {
-        	image = love.graphics.newImage("assets/sprites/placeholder/red.png"),
-        	speed = 200
-    	},
 
     	dasher = {
         	image = love.graphics.newImage("assets/sprites/handcar_sheet.png"),
@@ -145,11 +147,6 @@ function love.load()
     	}
 	}
 	collectibleTypes = {
-    	coin = {
-      		image = love.graphics.newImage('assets/sprites/coin.png'),
-      		speed = 200,
-      		collectibleScore = 10
-    	},
     	people = {
       		image = love.graphics.newImage('assets/sprites/people.png'),
       		speed = 300,
@@ -192,14 +189,15 @@ function love.keypressed(keyid, key, isrepeat)
 			highlighted = 1
 		end
 		if key == ('space') and player.fireCooldown <= 0 then
-    		-- Assuming player.x, player.y, and player.facing (1 for right, -1 for left) exist...
     		local bullet = {
       			x = player.x + player.img:getWidth(),
-      			y = player.y + player.img:getHeight() / 2,
-      			width = 8,
-      			height = 8,
-      			facing = player.facing or 1,
-      			speed = bulletSpeed
+      			y = player.y + player.img:getHeight() / 2 - sprites.bullet:getHeight() / 2,
+      			width = sprites.bullet:getWidth(),
+      			height = sprites.bullet:getHeight(),
+      			img = sprites.bullet,
+      			vx = bulletSpeed,
+      			vy = 0,
+      			owner = "player"
     		}
     		table.insert(bullets, bullet)
     		player.fireCooldown = player.fireRate
@@ -311,70 +309,91 @@ function love.update(dt)
 			player.fireCooldown = 0
 		end		
 		local railHeight = getRailHeight()
-		player.y = padding + (player.rail - 0.5) * railHeight - player.img:getHeight() -- move player to rail's location
+		player.y = padding + (player.rail) * railHeight - player.img:getHeight() -- move player to rail's location
 		for i = #bullets, 1, - 1 do
       		local bullet = bullets[i]
-			for j = #enemies, 1, -1 do
-        		local enemy = enemies[j]
+			if bullet.owner == "player" then
+				for j = #enemies, 1, -1 do
+        			local enemy = enemies[j]
 
-        		if bulletHitEnemy(bullet, enemy) then
-            		-- remove bullet
-            		table.remove(bullets, i)
+        			if bulletHitEnemy(bullet, enemy) then
+            			-- remove bullet
+            			table.remove(bullets, i)
 
-            		-- damage or remove enemy
-            		enemy.hp = enemy.hp - 50
+            			-- damage or remove enemy
+            			enemy.hp = enemy.hp - 50
 
-            		if enemy.hp <= 0 then
-                		table.remove(enemies, j)
-            		end
+            			if enemy.hp <= 0 then
+                				table.remove(enemies, j)
+            				end
 
-           	 		break -- stop checking other enemies for this bullet
+           				break -- stop checking other enemies for this bullet
        			end
     		end
+			elseif bullet.owner == "enemy" then
+				local originalY = bullet.y
+				bullet.y = bullet.y - 80
+				if checkCollision(bullet, player) then
+					table.remove(bullets, i)
+					gamestate = gamestates.dead
+				end
+				bullet.y = originalY
+			end
     	end
 		for i = #bullets, 1, - 1 do
     		local bullet = bullets[i]
 
+    	if bullet.vx or bullet.vy then
+    		bullet.x = bullet.x + (bullet.vx or 0) * dt
+    		bullet.y = bullet.y + (bullet.vy or 0) * dt
+    	else
     		bullet.x = bullet.x + bullet.speed * bullet.facing * dt
+    	end
 
-    		-- Remove off-screen bullets
-    		if bullet.x < 0 or bullet.x > Width() then
+    	-- Remove off-screen bullets
+    	if bullet.x < 0 or bullet.x > Width() or bullet.y < 0 or bullet.y > Height() then
       			table.remove(bullets, i)
     		end
   		end
+		
+	end
 		-- spawn delay and spawn system
 		spawnTimer = spawnTimer + dt
 
 		if spawnTimer >= spawnDelay then
     		spawnTimer = 0
     		spawnDelay = math.random(1, 3)
-    		spawnEnemy()
+    		if barrierEnemyCooldown <= 0 then
+    			spawnEnemy()
+    			barrierEnemyCooldown = barrierEnemyDelay
+    		end
 			spawnCollectible()
 		end
 
-		-- rocket warning and active rocket spawning
-		rocketSpawnTimer = rocketSpawnTimer + dt
-		if rocketSpawnTimer >= rocketSpawnDelay then
-			rocketSpawnTimer = 0
-			rocketSpawnDelay = math.random(4, 7)
-			spawnRocketWarning()
+		-- shared barrier/enemy cooldown
+		if barrierEnemyCooldown > 0 then
+			barrierEnemyCooldown = barrierEnemyCooldown - dt
+			if barrierEnemyCooldown < 0 then
+				barrierEnemyCooldown = 0
+			end
 		end
 
-		-- laser warning and active laser spawning
-		laserSpawnTimer = laserSpawnTimer + dt
-		if laserSpawnTimer >= laserSpawnDelay then
-			laserSpawnTimer = 0
-			laserSpawnDelay = math.random(5, 9)
-			spawnLaserWarning()
+		-- shared rocket/laser threat spawn timer
+		threatSpawnTimer = threatSpawnTimer + dt
+		if threatSpawnTimer >= threatSpawnDelay then
+			threatSpawnTimer = 0
+			threatSpawnDelay = math.random(2, 4)
+			if math.random() < 0.5 then
+				spawnRocketWarning()
+			else
+				spawnLaserWarning()
+			end
 		end
 
 		-- movement
 		for i, enemy in ipairs(enemies) do
 
-    		if enemy.type == "basic" then
-        		enemy.x = enemy.x - enemy.speed * dt
-
-    		elseif enemy.type == "dasher" then
+    		if enemy.type == "dasher" then
         		enemy.dashCooldown = enemy.dashCooldown - dt
 				if enemy.dashCooldown <= 0 and enemy.dashTimer <= 0 then
 					enemy.dashTimer = 0.6
@@ -387,11 +406,19 @@ function love.update(dt)
 					enemy.x = enemy.x - enemy.speed * dt
 				end
     		elseif enemy.type == "shooter" then
-        		enemy.x = enemy.x - enemy.speed * dt
+    			enemy.x = enemy.x - enemy.speed * dt
 
-        		-- shooting code later
-    		end
+    			enemy.shootTimer = enemy.shootTimer - dt
+
+    			if enemy.shootTimer <= 0 then
+        			spawnEnemyBullet(enemy)
+
+        			-- fire every 1–2 seconds
+        			enemy.shootTimer = 1 + math.random()
+    			end
+			end
 		end
+			
 		-- reset
 		for i = #enemies, 1, -1 do
     		if enemies[i].x < -50 then
@@ -412,7 +439,7 @@ function love.update(dt)
 					-- set active (scaled) dimensions and align Y to the rail
 					rocket.width = rocket.activeWidth
 					rocket.height = rocket.activeHeight
-					rocket.y = padding + (rocket.rail - 0.5) * getRailHeight() - rocket.height
+					rocket.y = padding + (rocket.rail) * getRailHeight() - rocket.height
 				end
 			else
 				rocket.x = rocket.x - rocket.speed * dt
@@ -425,10 +452,17 @@ function love.update(dt)
 			end
 		end
 
-		-- laser warning countdown and active laser timing
+		-- laser warning, inactive warning, and active laser timing
 		for i = #lasers, 1, -1 do
 			local laser = lasers[i]
 			if laser.state == "warning" then
+				laser.timer = laser.timer - dt
+				laser.flashTimer = laser.flashTimer + dt
+				if laser.timer <= 0 then
+					laser.state = "inactive"
+					laser.timer = laser.inactiveDuration
+				end
+			elseif laser.state == "inactive" then
 				laser.timer = laser.timer - dt
 				laser.flashTimer = laser.flashTimer + dt
 				if laser.timer <= 0 then
@@ -484,13 +518,10 @@ function love.update(dt)
 		-- movement
 		for i, collectible in ipairs(collectibles) do
 
-		if collectible.type == "coin" then
+			if collectible.type == "people" then
 			collectible.x = collectible.x - collectible.speed * dt
 			-- sound effect code later
-		elseif collectible.type == "people" then
-			collectible.x = collectible.x - collectible.speed * dt
-			-- sound effect code later
-		end
+			end
 		end
 		-- reset
 		for i = #collectibles, 1, - 1 do
@@ -517,9 +548,8 @@ function love.update(dt)
 		end
 		-----------------
 	end
-end
 function spawnCollectible()
-  local types = {"coin", "people"}
+  local types = {"people"}
   local collectibleType = types[math.random(#types)]
   local rail = math.random(1, numRails)
   local data = collectibleTypes[collectibleType]
@@ -529,16 +559,30 @@ function spawnCollectible()
     type = collectibleType,
     x = Width(),
     speed = data.speed,
-    y = padding + (rail - 0.5) * railHeight - data.image:getHeight(),
+    y = padding + (rail) * railHeight - data.image:getHeight(),
     img = data.image,
     collectibleScore = data.collectibleScore
   }
 
   table.insert(collectibles, collectible)
 end
+
+function spawnEnemyBullet(enemy)
+    local bullet = {
+    x = enemy.x,
+    y = enemy.y + enemy.img:getHeight() / 2 - sprites.enemy_bullet:getHeight() / 2,
+    width = sprites.enemy_bullet:getWidth(),
+    height = sprites.enemy_bullet:getHeight(),
+    img = sprites.enemy_bullet,
+    vx = -bulletSpeed,
+    vy = 0,
+    owner = "enemy"
+}
+    table.insert(bullets, bullet)
+end
 function spawnEnemy()
 
-    local types = {"basic", "dasher", "shooter"}
+    local types = { "dasher", "shooter"}
     local enemyType = types[math.random(#types)]
 	local rail = math.random(1, numRails)
     local data = enemyTypes[enemyType]
@@ -549,7 +593,7 @@ function spawnEnemy()
         type = enemyType,
         x = Width(),
         speed = data.speed,
-		y = padding + (rail - 0.5) * railHeight - data.image:getHeight(),
+		y = padding + (rail) * railHeight - data.image:getHeight(),
         img = data.image,
 		dash = true,
 		bullet = true,
@@ -558,6 +602,9 @@ function spawnEnemy()
 		hp = 50
     }
 
+    if enemy.type == "shooter" then
+        enemy.shootTimer = 1.5 + math.random() * 1.5
+    end
     table.insert(enemies, enemy)
 end
 
@@ -568,7 +615,7 @@ function spawnRocketWarning()
     local warningHeight = sprites.warning:getHeight()
     local rocket = {
         x = Width() - warningWidth - 10,
-        y = padding + (rail - 0.5) * railHeight - warningHeight,
+        y = padding + (rail) * railHeight - warningHeight,
         width = warningWidth,
         height = warningHeight,
         speed = rocketSpeed,
@@ -591,19 +638,28 @@ function spawnLaserWarning()
     local railHeight = getRailHeight()
     local warningWidth = sprites.warningLaser:getWidth()
     local warningHeight = sprites.warningLaser:getHeight()
+    local inactiveScale = 1.5
+    local inactiveWidth = sprites.laser_inactive:getWidth() * inactiveScale
+    local inactiveHeight = sprites.laser_inactive:getHeight() * inactiveScale
     local laserHeight = railHeight - 8
     local laser = {
         warningX = Width() - warningWidth - 10,
-        warningY = padding + (rail - 0.5) * railHeight - warningHeight,
+        warningY = padding + (rail) * railHeight - warningHeight,
+        inactiveX = Width() - inactiveWidth - 10,
+        inactiveY = padding + (rail) * railHeight - inactiveHeight,
         x = 0,
-        y = padding + (rail - 0.5) * railHeight - laserHeight,
+        y = padding + (rail) * railHeight - laserHeight,
         width = Width(),
         height = laserHeight,
         state = "warning",
         timer = laserWarningDuration,
+        inactiveDuration = laserInactiveDuration,
         activeDuration = 0.2,
         activeTimer = 0,
         img = sprites.laser_warning,
+        inactiveImg = sprites.laser_inactive,
+        inactiveScale = inactiveScale,
+        activeImg = sprites.laser_active,
         rail = rail,
         flashTimer = 0
     }
@@ -692,7 +748,6 @@ function love.draw()
     	local font = love.graphics.getFont()
     	local fontHeight = font:getHeight()
     	-- Print at X=10 and calculate bottom edge using Y
-    	-- The +0.5 helps with pixel-perfect alignment (optional)
     	love.graphics.print("Score: " .. score, scoreFont, 10, windowHeight - scoreFont:getHeight())
 
 			-- The platform will now be drawn as a white rectangle while taking in the variables we declared above.
@@ -723,17 +778,27 @@ function love.draw()
 				love.graphics.draw(rocket.img, rocket.x, rocket.y, 0, 0.17, 0.17)
 			end
 		end
-
 		for i, laser in ipairs(lasers) do
+			local flashInterval = 0.15
 			if laser.state == "warning" then
-				local flashInterval = 0.15
 				if math.floor(laser.flashTimer / flashInterval) % 2 == 0 then
 					love.graphics.setColor(1, 1, 1)
 					love.graphics.draw(laser.img, laser.warningX, laser.warningY)
 				end
+			elseif laser.state == "inactive" then
+				local beamX = laser.inactiveX + laser.inactiveImg:getWidth() * laser.inactiveScale * 0.5
+				local beamY = laser.inactiveY + laser.inactiveImg:getHeight() * laser.inactiveScale * 0.5 - 3
+				if math.floor(laser.flashTimer / flashInterval) % 2 == 0 then
+					love.graphics.setColor(1, 0, 0)
+					love.graphics.rectangle("fill", 0, beamY, beamX, 6)
+				end
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.draw(laser.inactiveImg, laser.inactiveX, laser.inactiveY, 0, laser.inactiveScale, laser.inactiveScale)
 			else
-				love.graphics.setColor(1, 0, 0)
-				love.graphics.rectangle("fill", laser.x, laser.y, laser.width, laser.height)
+				love.graphics.setColor(1, 1, 1)
+				local scaleX = Width() / laser.activeImg:getWidth()
+				local scaleY = laser.height / laser.activeImg:getHeight()
+				love.graphics.draw(laser.activeImg, 0, laser.y, 0, scaleX, scaleY)
 			end
 		end
 		love.graphics.setColor(1, 1, 1)		
@@ -742,13 +807,9 @@ function love.draw()
     	end
 		-- Draw bullets
 		for i, bullet in ipairs(bullets) do
-			love.graphics.circle(
-			"fill",
-			bullet.x,
-			bullet.y,
-			bullet.width,
-			bullet.height
-			)
+			local sx = bullet.owner == "enemy" and -1 or 1
+			local ox = bullet.owner == "enemy" and bullet.img:getWidth() or 0
+			love.graphics.draw(bullet.img, bullet.x, bullet.y, 0, sx, 1, ox, 0)
 		end
 	end
 	if gamestate == gamestates.paused then
@@ -777,4 +838,5 @@ function love.draw()
 
 	end
 end
+
 
