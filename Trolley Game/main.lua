@@ -26,6 +26,7 @@ barrierEnemyDelay = 0.5
 threatSpawnTimer = 0
 threatSpawnDelay = 0
 padding = 40
+deathReason = "Error"
 pauseFont = love.graphics.newFont(32) -- size 32 default font
 scoreFont = love.graphics.newFont(26)
 highlighted = 0 -- which option in a menu is highlighted, 0 means none, 1 is first
@@ -83,6 +84,7 @@ function love.load()
 	score = 0
 	timeSinceStart = 0
 	animationTimer = 0
+	deathReason = "Error"
 
     love.window.setTitle("Trolley Troubles")
 
@@ -224,9 +226,9 @@ function love.keypressed(keyid, key, isrepeat)
 		end
 		elseif gamestate == gamestates.dead then
 		if key == 'w' then
-			highlighted = indexMod(highlighted, -1, 2)
+			highlighted = indexMod(highlighted, -1, 3)
 		elseif key == 's' then
-			highlighted = indexMod(highlighted, 1, 2)
+			highlighted = indexMod(highlighted, 1, 3)
 		elseif key == 'space' or key == 'enter' then
 			if highlighted == 1 then
 				love.load()
@@ -234,7 +236,13 @@ function love.keypressed(keyid, key, isrepeat)
 			elseif highlighted == 2 then
 				love.load()
 				gamestate = gamestates.menu
+			elseif highlighted == 3 then
+				love.event.quit(0)
 			end
+		end
+	elseif gamestate == gamestates.menu then
+		if key == 'space' or key == 'enter' then
+			gamestate = gamestates.loading
 		end
 	end
 end
@@ -244,7 +252,6 @@ function love.update(dt)
 			x, y = love.mouse.getPosition()
 			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
 				gamestate = gamestates.loading
-				gamestate = gamestates.alive
 			end
 		end
 	elseif gamestate == gamestates.loading then
@@ -270,7 +277,7 @@ function love.update(dt)
 		end
 	elseif gamestate == gamestates.dead then
 		local x, y = love.mouse.getPosition()
-		for i=1,2 do
+		for i=1,3 do
 			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+sprites.resume:getHeight()) then
 				highlighted = i
 				if love.mouse.isDown(1) then
@@ -280,6 +287,8 @@ function love.update(dt)
 					elseif highlighted == 2 then
 						love.load()
 						gamestate = gamestates.menu
+					elseif highlighted == 3 then
+						love.event.quit(0)
 					end
 				end
 				break
@@ -336,6 +345,7 @@ function love.update(dt)
 				if checkCollision(bullet, player) then
 					table.remove(bullets, i)
 					gamestate = gamestates.dead
+					deathReason = "Shot by an enemy"
 				end
 				bullet.y = originalY
 			end
@@ -447,6 +457,7 @@ function love.update(dt)
 				table.remove(rockets, i)
 			elseif rocket.state == "active" and checkCollision(player, rocket) then
 				gamestate = gamestates.dead
+				deathReason = "Hit by a rocket"
 			end
 		end
 
@@ -476,12 +487,14 @@ function love.update(dt)
 
 			if laser.state == "active" and player.rail == laser.rail then
 				gamestate = gamestates.dead
+				deathReason = "Incinerated by a laser"
 			end
 		end
 		--collision check
 		for i, enemy in ipairs(enemies) do
         	if checkCollision(player, enemy) then
             	gamestate = gamestates.dead
+				deathReason = "Ran into an enemy"
         	end
     	end
 		for i = 1, #rails do
@@ -497,6 +510,7 @@ function love.update(dt)
 
             		if checkCollision(player, barrier) then
                 		gamestate = gamestates.dead
+						deathReason = "Hit a barrier"
             		end
         		end
     		end
@@ -703,6 +717,11 @@ function love.draw()
 
 		love.graphics.draw(sprites.retry,Width()/2 - sprites.retry:getWidth()/2,.60*Height())
 		love.graphics.draw(sprites.mainmenu,Width()/2 - sprites.mainmenu:getWidth()/2,.70*Height())
+		love.graphics.draw(sprites.quit,Width()/2 - sprites.quit:getWidth()/2,.80*Height())
+		
+		love.graphics.setColor(1,0,0) -- red text
+		love.graphics.printf(deathReason,pauseFont,.25*Width(),.525*Height(),.50*Width(),"center")
+		love.graphics.setColor(1,1,1) -- default/white text
 
 		-- love.graphics.setColor(1,1,1,0.15) -- mostly transparent white (highlight)
 		if highlighted > 0 then
@@ -710,6 +729,8 @@ function love.draw()
 				love.graphics.draw(sprites.retry_sel,Width()/2 - sprites.retry_sel:getWidth()/2,.60*Height())
 			elseif highlighted == 2 then
 				love.graphics.draw(sprites.mainmenu_sel,Width()/2 - sprites.mainmenu_sel:getWidth()/2,.70*Height())
+			elseif highlighted == 3 then
+				love.graphics.draw(sprites.quit_sel,Width()/2 - sprites.quit_sel:getWidth()/2,.80*Height())
 			end
 		end
 
