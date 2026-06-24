@@ -144,7 +144,7 @@ function love.load()
     	},
 
     	shooter = {
-        	image = love.graphics.newImage("assets/sprites/placeholder/Placeholder Enemy.png"),
+        	image = love.graphics.newImage("assets/sprites/shooter_sheet.png"),
         	speed = 25
     	}
 	}
@@ -159,6 +159,10 @@ function love.load()
 	enemyTypes.dasher.grid = anim8.newGrid(168, 156, enemyTypes.dasher.image:getWidth(), enemyTypes.dasher.image:getHeight())
 	enemyTypes.dasher.animations = {}
 	enemyTypes.dasher.animations.move = anim8.newAnimation(enemyTypes.dasher.grid('1-2', 1), 0.8)
+	--Shooter animation setup
+	enemyTypes.shooter.grid = anim8.newGrid(195, 112, enemyTypes.shooter.image:getWidth(), enemyTypes.shooter.image:getHeight())
+	enemyTypes.shooter.animations = {}
+	enemyTypes.shooter.animations.move = anim8.newAnimation(enemyTypes.shooter.grid('1-3', 1), 0.3)
 
 
 	railImg = love.graphics.newImage("assets/sprites/rail_tile.png")
@@ -435,6 +439,7 @@ function love.update(dt)
 		end
 
 		enemyTypes.dasher.animations.move:update(dt)
+		enemyTypes.shooter.animations.move:update(dt)
 
 		-- rocket warning countdown and active rocket movement
 		for i = #rockets, 1, -1 do
@@ -781,6 +786,8 @@ function love.draw()
 				else
 					love.graphics.draw(enemyTypes.dasher.dash, enemy.x, enemy.y)
 				end
+			elseif enemy.type == "shooter" then
+				enemyTypes.shooter.animations.move:draw(enemyTypes.shooter.image, enemy.x, enemy.y)
 			else
 				love.graphics.draw(enemy.img, enemy.x, enemy.y)
 			end
