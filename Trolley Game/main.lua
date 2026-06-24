@@ -240,6 +240,10 @@ function love.keypressed(keyid, key, isrepeat)
 				love.event.quit(0)
 			end
 		end
+	elseif gamestate == gamestates.menu then
+		if key == 'space' or key == 'enter' then
+			gamestate = gamestates.loading
+		end
 	end
 end
 function love.update(dt)
@@ -248,7 +252,6 @@ function love.update(dt)
 			x, y = love.mouse.getPosition()
 			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
 				gamestate = gamestates.loading
-				gamestate = gamestates.alive
 			end
 		end
 	elseif gamestate == gamestates.loading then
