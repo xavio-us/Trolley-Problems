@@ -4,6 +4,8 @@ collectibles = {}
 score = 0
 spawnTimer = 0
 spawnDelay = 0
+collectibleSpawnTimer = 0
+collectibleSpawnDelay = 0
 numRails = 6
 sprites = {}
 gamestates = {["alive"] = 1, ["dead"] = 2, ["menu"] = 3, ["paused"] = 4, ["loading"] = 5}
@@ -17,12 +19,11 @@ rockets = {}
 lasers = {}
 bulletSpeed = 500
 rocketSpeed = 750
-laserSpeed = 700
 rocketWarningDuration = 1.4
 laserWarningDuration = 1.0
 laserInactiveDuration = 1.4
 barrierEnemyCooldown = 0
-barrierEnemyDelay = 0.5
+barrierEnemyDelay = 0.7
 threatSpawnTimer = 0
 threatSpawnDelay = 0
 padding = 40
@@ -45,11 +46,12 @@ function generateRail(i,j)
 		y=padding + (i) * getRailHeight() + math.random(-2,2)
 	}
 
- 	-- 3% chance of becoming a barrier
-    if math.random() < 0.03 and timeSinceStart > 1 and barrierEnemyCooldown <= 0 then
+ 	-- Barrier chance starts at 2% and increases very slowly over time
+    -- Increases by 0.02% per second, capped at 10%
+    local barrierChance = math.min(0.10, 0.02 + (timeSinceStart or 0) * 0.0002)
+    if math.random() < barrierChance and (timeSinceStart or 0) > 1 then
         tile.img = barrierImg
         tile.type = "barrier"
-        barrierEnemyCooldown = barrierEnemyDelay
     else
         tile.img = railImg
         tile.type = "rail"
@@ -71,7 +73,10 @@ end
 function love.load()
 
 	anim8 = require 'libraries/anim8'
-	
+	screamSound = love.audio.newSource("assets/sounds/screamcrowd.mp3", "static")
+	crashSound = love.audio.newSource("assets/sounds/crash.mp3", "static")
+	shootSound = love.audio.newSource("assets/sounds/shoot.mp3", "static")
+
 	
 	-- reset everything
 	enemies = {}
@@ -145,14 +150,15 @@ function love.load()
 
     	shooter = {
         	image = love.graphics.newImage("assets/sprites/shooter_sheet.png"),
-        	speed = 25
+        	speed = 100
     	}
 	}
 	collectibleTypes = {
     	people = {
       		image = love.graphics.newImage('assets/sprites/people.png'),
       		speed = 300,
-      		collectibleScore = 300
+      		collectibleScore = 300,
+			sound = screamSound
     	}
   	}
 	--Handcar animation setup
@@ -206,6 +212,8 @@ function love.keypressed(keyid, key, isrepeat)
       			owner = "player"
     		}
     		table.insert(bullets, bullet)
+			local shootSound = shootSound:clone()
+        	love.audio.play(shootSound)
     		player.fireCooldown = player.fireRate
   		end
 	elseif gamestate == gamestates.paused then
@@ -337,6 +345,7 @@ function love.update(dt)
             			enemy.hp = enemy.hp - 50
 
             			if enemy.hp <= 0 then
+								score = score + 100
                 				table.remove(enemies, j)
             				end
 
@@ -374,27 +383,38 @@ function love.update(dt)
 
 		if spawnTimer >= spawnDelay then
     		spawnTimer = 0
-    		spawnDelay = math.random(1, 3)
+    		-- Decrease spawn delay as time goes on (enemies spawn more frequently)
+    		-- Scales very slowly over time
+    		local maxDelay = math.max(0.5, 3 - timeSinceStart * 0.01)
+    		local minDelay = math.max(0.1, 1 - timeSinceStart * 0.005)
+    		spawnDelay = math.random() * (maxDelay - minDelay) + minDelay
     		if barrierEnemyCooldown <= 0 then
     			spawnEnemy()
     			barrierEnemyCooldown = barrierEnemyDelay
     		end
+		end
+		
+		-- Collectible spawn with fixed delay (does not scale)
+		collectibleSpawnTimer = collectibleSpawnTimer + dt
+		if collectibleSpawnTimer >= collectibleSpawnDelay then
+			collectibleSpawnTimer = 0
+			collectibleSpawnDelay = math.random(1, 3)
 			spawnCollectible()
 		end
 
-		-- shared barrier/enemy cooldown
+		--enemy cooldown
 		if barrierEnemyCooldown > 0 then
 			barrierEnemyCooldown = barrierEnemyCooldown - dt
-			if barrierEnemyCooldown < 0 then
-				barrierEnemyCooldown = 0
-			end
 		end
 
 		-- shared rocket/laser threat spawn timer
 		threatSpawnTimer = threatSpawnTimer + dt
 		if threatSpawnTimer >= threatSpawnDelay then
 			threatSpawnTimer = 0
-			threatSpawnDelay = math.random(2, 4)
+			-- Decrease spawn delay as time goes on (threats spawn more frequently)
+			local maxDelay = math.max(0.5, 4 - timeSinceStart * 0.03)
+			local minDelay = math.max(0.2, 2 - timeSinceStart * 0.015)
+			threatSpawnDelay = math.random() * (maxDelay - minDelay) + minDelay
 			if math.random() < 0.5 then
 				spawnRocketWarning()
 			else
@@ -425,8 +445,8 @@ function love.update(dt)
     			if enemy.shootTimer <= 0 then
         			spawnEnemyBullet(enemy)
 
-        			-- fire every 1–2 seconds
-        			enemy.shootTimer = 1 + math.random()
+        			-- fire every 2–3 seconds
+        			enemy.shootTimer = 2 + math.random()
     			end
 			end
 		end
@@ -498,6 +518,7 @@ function love.update(dt)
 		--collision check
 		for i, enemy in ipairs(enemies) do
         	if checkCollision(player, enemy) then
+				love.audio.play(crashSound)
             	gamestate = gamestates.dead
 				deathReason = "Ran into an enemy"
         	end
@@ -514,6 +535,7 @@ function love.update(dt)
             		}
 
             		if checkCollision(player, barrier) then
+						love.audio.play(crashSound)
                 		gamestate = gamestates.dead
 						deathReason = "Hit a barrier"
             		end
@@ -536,7 +558,7 @@ function love.update(dt)
 		for i, collectible in ipairs(collectibles) do
 
 			if collectible.type == "people" then
-			collectible.x = collectible.x - collectible.speed * dt
+				collectible.x = collectible.x - collectible.speed * dt
 			-- sound effect code later
 			end
 		end
@@ -549,6 +571,7 @@ function love.update(dt)
 		--collision check
 		for i, collectible in ipairs(collectibles) do
 		if checkCollision(player, collectible) then
+			love.audio.play(collectibleTypes[collectible.type].sound)
 			score = score + collectible.collectibleScore
 			print(score)
 			table.remove(collectibles, i)
@@ -580,6 +603,7 @@ function spawnCollectible()
     speed = data.speed,
     y = padding + (rail) * railHeight - data.image:getHeight(),
     img = data.image,
+	sound = data.sound,
     collectibleScore = data.collectibleScore
   }
 
@@ -601,7 +625,7 @@ function spawnEnemyBullet(enemy)
 end
 function spawnEnemy()
 
-    local types = { "dasher", "shooter"}
+    local types = { "dasher", "dasher", "dasher", "shooter"}
     local enemyType = types[math.random(#types)]
 	local rail = math.random(1, numRails)
     local data = enemyTypes[enemyType]
@@ -673,7 +697,7 @@ function spawnLaserWarning()
         state = "warning",
         timer = laserWarningDuration,
         inactiveDuration = laserInactiveDuration,
-        activeDuration = 0.2,
+        activeDuration = 0.5,
         activeTimer = 0,
         img = sprites.laser_warning,
         inactiveImg = sprites.laser_inactive,
