@@ -76,8 +76,16 @@ function love.load()
 	screamSound = love.audio.newSource("assets/sounds/screamcrowd.mp3", "static")
 	crashSound = love.audio.newSource("assets/sounds/crash.mp3", "static")
 	shootSound = love.audio.newSource("assets/sounds/shoot.mp3", "static")
-
-	
+	gameplayMusic = love.audio.newSource("assets/music/Gameplay music.wav", "stream")
+	titleMusic = love.audio.newSource("assets/music/Title Music.wav", "stream")
+	screamSound:setVolume(0.1)
+	crashSound:setVolume(0.3)
+	shootSound:setVolume(0.03)
+	gameplayMusic:setVolume(0.1)
+	gameplayMusic:setLooping(true)
+	titleMusic:setVolume(0.2)
+	titleMusic:setLooping(true)
+	--gameplayMusic:setLooping(true)
 	-- reset everything
 	enemies = {}
 	collectibles = {}
@@ -197,6 +205,9 @@ function love.keypressed(keyid, key, isrepeat)
 				player.rail = player.rail + 1
 			end
 		elseif key == 'escape' then
+			gameplayMusic:stop()
+			screamSound:stop()
+			shootSound:stop()
 			gamestate = gamestates.paused
 			highlighted = 1
 		end
@@ -213,11 +224,16 @@ function love.keypressed(keyid, key, isrepeat)
     		}
     		table.insert(bullets, bullet)
 			local shootSound = shootSound:clone()
+			love.audio.stop(shootSound)
         	love.audio.play(shootSound)
     		player.fireCooldown = player.fireRate
   		end
 	elseif gamestate == gamestates.paused then
+		gameplayMusic:stop()
+		screamSound:stop()
+		shootSound:stop()
 		if key == 'escape' then
+			gameplayMusic:play()
 			gamestate = gamestates.alive
 		elseif key == 'w' then
 			highlighted = indexMod(highlighted, -1, 3) -- num options is 3 right now, change if diff.
@@ -237,6 +253,9 @@ function love.keypressed(keyid, key, isrepeat)
 			end
 		end
 		elseif gamestate == gamestates.dead then
+			gameplayMusic:stop()
+			screamSound:stop()
+			shootSound:stop()
 		if key == 'w' then
 			highlighted = indexMod(highlighted, -1, 3)
 		elseif key == 's' then
@@ -253,6 +272,9 @@ function love.keypressed(keyid, key, isrepeat)
 			end
 		end
 	elseif gamestate == gamestates.menu then
+		gameplayMusic:stop()
+		screamSound:stop()
+		shootSound:stop()
 		if key == 'space' or key == 'enter' then
 			gamestate = gamestates.loading
 		end
@@ -260,6 +282,10 @@ function love.keypressed(keyid, key, isrepeat)
 end
 function love.update(dt)
 	if gamestate == gamestates.menu then
+		titleMusic:play()
+		gameplayMusic:stop()
+		screamSound:stop()
+		shootSound:stop()
 		if love.mouse.isDown(1) then
 			x, y = love.mouse.getPosition()
 			if (x > Width()/2 - sprites.start:getWidth()/2 and x < Width()/2 + sprites.start:getWidth()/2) and (y > Height()/2 - sprites.start:getHeight()/2 and y < Height()/2 + sprites.start:getHeight()/2) then
@@ -267,9 +293,17 @@ function love.update(dt)
 			end
 		end
 	elseif gamestate == gamestates.loading then
+		titleMusic:stop()
+		gameplayMusic:stop()
+		screamSound:stop()
+		shootSound:stop()
 		love.timer.sleep(0.5)
 		gamestate = gamestates.alive
 	elseif gamestate == gamestates.paused then
+		titleMusic:stop()
+		gameplayMusic:stop()
+		screamSound:stop()
+		shootSound:stop()
 		local x, y = love.mouse.getPosition()
 		for i=1,3 do
 			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.40*Height()+.10*Height()*i and y < .40*Height()+.10*Height()*i+sprites.resume:getHeight()) then
@@ -288,6 +322,9 @@ function love.update(dt)
 			end
 		end
 	elseif gamestate == gamestates.dead then
+		gameplayMusic:stop()
+		screamSound:stop()
+		shootSound:stop()
 		local x, y = love.mouse.getPosition()
 		for i=1,3 do
 			if (x > Width()/2 - sprites.resume:getWidth()/2 and x < Width()/2 + sprites.resume:getWidth()/2 and y >.50*Height()+.10*Height()*i and y < .50*Height()+.10*Height()*i+sprites.resume:getHeight()) then
@@ -307,7 +344,7 @@ function love.update(dt)
 			end
 		end
 	elseif gamestate == gamestates.alive then
-
+		gameplayMusic:play()
 		timeSinceStart = timeSinceStart + dt
 
 		-- animate background tiles and wrap when a tile moves fully off-screen
@@ -358,6 +395,9 @@ function love.update(dt)
 				if checkCollision(bullet, player) then
 					table.remove(bullets, i)
 					gamestate = gamestates.dead
+					gameplayMusic:stop()
+					screamSound:stop()
+					shootSound:stop()
 					deathReason = "Shot by an enemy"
 				end
 				bullet.y = originalY
@@ -518,6 +558,7 @@ function love.update(dt)
 		--collision check
 		for i, enemy in ipairs(enemies) do
         	if checkCollision(player, enemy) then
+				love.audio.stop(crashSound)
 				love.audio.play(crashSound)
             	gamestate = gamestates.dead
 				deathReason = "Ran into an enemy"
@@ -535,6 +576,7 @@ function love.update(dt)
             		}
 
             		if checkCollision(player, barrier) then
+						love.audio.stop(crashSound)
 						love.audio.play(crashSound)
                 		gamestate = gamestates.dead
 						deathReason = "Hit a barrier"
@@ -571,6 +613,7 @@ function love.update(dt)
 		--collision check
 		for i, collectible in ipairs(collectibles) do
 		if checkCollision(player, collectible) then
+			love.audio.stop(collectibleTypes[collectible.type].sound)
 			love.audio.play(collectibleTypes[collectible.type].sound)
 			score = score + collectible.collectibleScore
 			print(score)
